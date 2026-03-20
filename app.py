@@ -216,10 +216,21 @@ def api_portfolio():
             portfolio_val  = safe_float(portfolio.get('portfolioValue', portfolio.get('totalValue', 0)))
             cash           = safe_float(portfolio.get('cashBalance', portfolio.get('cash', 0)))
         else:
-            positions      = getattr(portfolio, 'positions', None) or getattr(portfolio, 'holdings', []) or []
-            buying_power   = safe_float(get_attr(portfolio, 'buyingPower', 'buying_power', default=0))
-            portfolio_val  = safe_float(get_attr(portfolio, 'portfolioValue', 'totalValue', default=0))
-            cash           = safe_float(get_attr(portfolio, 'cashBalance', 'cash', default=0))
+            positions      = getattr(portfolio, 'positions', None) or []
+            # buying_power is an object with .buying_power inside
+            bp_obj = getattr(portfolio, 'buying_power', None)
+            if bp_obj and hasattr(bp_obj, 'buying_power'):
+                buying_power = safe_float(bp_obj.buying_power)
+                cash = safe_float(getattr(bp_obj, 'cash_only_buying_power', bp_obj.buying_power))
+            else:
+                buying_power = safe_float(bp_obj)
+                cash = buying_power
+            # equity is a list of asset types — sum all values
+            equity_list = getattr(portfolio, 'equity', []) or []
+            if isinstance(equity_list, list):
+                portfolio_val = sum(safe_float(getattr(e, 'value', 0)) for e in equity_list)
+            else:
+                portfolio_val = safe_float(equity_list)
 
         # Build position list with live quotes
         all_symbols = []
@@ -228,8 +239,10 @@ def api_portfolio():
             # Public.com SDK: pos.instrument.symbol, pos.quantity, pos.cost_basis, etc.
             if hasattr(pos, 'instrument') and hasattr(pos.instrument, 'symbol'):
                 sym = str(pos.instrument.symbol)
+                inst_type = str(getattr(pos.instrument, 'type', '')).upper()
             else:
                 sym = get_attr(pos, 'symbol', 'ticker', default='')
+                inst_type = ''
             qty       = safe_float(get_attr(pos, 'quantity', 'qty', 'shares', default=0))
             if hasattr(pos, 'cost_basis') and pos.cost_basis:
                 avg_cost = safe_float(getattr(pos.cost_basis, 'unit_cost', 0))
