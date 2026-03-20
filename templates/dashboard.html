@@ -492,7 +492,13 @@
       .logo-sub { display: none; }
       header { height: 52px; }
     }
-  </style>
+  
+.progress-wrap{display:none;margin:12px 0}
+.progress-wrap.active{display:block}
+.progress-bar{width:100%;height:6px;background:var(--bg2);border-radius:3px;overflow:hidden}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--blue),var(--green));border-radius:3px;width:0%;transition:width 0.3s}
+.progress-label{font-size:11px;color:var(--text2);margin-top:4px;display:flex;justify-content:space-between}
+</style>
 </head>
 <body>
 <div id="app">
@@ -1449,6 +1455,64 @@ async function loadHistory() {
   await checkStatus();
   await loadPortfolio();
 })();
+
+// Progress bar helpers
+function showProgress(containerId, label) {
+    var wrap = document.createElement('div');
+    wrap.className = 'progress-wrap active';
+    wrap.id = containerId + '-progress';
+    wrap.innerHTML = '<div class="progress-bar"><div class="progress-fill" id="' + containerId + '-fill"></div></div><div class="progress-label"><span id="' + containerId + '-plabel">' + (label||'Loading...') + '</span><span id="' + containerId + '-ppct">0%</span></div>';
+    var target = $(containerId);
+    if (target && target.parentNode) target.parentNode.insertBefore(wrap, target);
+    animateProgress(containerId, 0);
+}
+
+function animateProgress(containerId, pct) {
+    var fill = $(containerId + '-fill');
+    var ppct = $(containerId + '-ppct');
+    var plabel = $(containerId + '-plabel');
+    if (!fill) return;
+    
+    var phases = [
+        {to:20, msg:'Connecting to API...'},
+        {to:40, msg:'Fetching data...'},
+        {to:60, msg:'Processing...'},
+        {to:80, msg:'Analyzing...'},
+        {to:95, msg:'Almost done...'}
+    ];
+    
+    var current = pct;
+    var phase = 0;
+    var interval = setInterval(function() {
+        if (phase >= phases.length) { clearInterval(interval); return; }
+        current += (phases[phase].to - current) * 0.08;
+        if (current >= phases[phase].to - 1) phase++;
+        fill.style.width = current + '%';
+        if (ppct) ppct.textContent = Math.floor(current) + '%';
+        if (plabel && phases[phase]) plabel.textContent = phases[phase].msg;
+    }, 150);
+    
+    // Store interval for cleanup
+    fill.dataset.interval = interval;
+}
+
+function hideProgress(containerId) {
+    var wrap = $(containerId + '-progress');
+    if (wrap) {
+        var fill = $(containerId + '-fill');
+        if (fill) {
+            clearInterval(parseInt(fill.dataset.interval));
+            fill.style.width = '100%';
+        }
+        var ppct = $(containerId + '-ppct');
+        if (ppct) ppct.textContent = '100%';
+        setTimeout(function() { if (wrap.parentNode) wrap.parentNode.removeChild(wrap); }, 500);
+    }
+}
+
+// Auto-refresh portfolio every 30 seconds
+setInterval(function() { loadPortfolio(); }, 30000);
+
 </script>
 </body>
 </html>
