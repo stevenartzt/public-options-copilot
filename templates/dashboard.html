@@ -980,6 +980,7 @@ async function checkStatus() {
 async function loadPortfolio() {
   $('portfolio-spinner').style.display = 'inline-block';
   $('portfolio-tbody').innerHTML = '<tr class="loading-row"><td colspan="13"><span class="spinner"></span> Fetching positions...</td></tr>';
+  showProgress('portfolio-tbody', 'Loading portfolio...');
 
   const d = await api('/api/portfolio');
   $('portfolio-spinner').style.display = 'none';
@@ -999,6 +1000,7 @@ async function loadPortfolio() {
   upEl.className = 'stat-value ' + pnlClass(up);
   $('stat-positions').textContent = d.count || 0;
 
+  hideProgress('portfolio-tbody');
   // Update header
   $('buying-power-hdr').innerHTML = `BP: <strong>$${(d.buying_power||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}</strong>`;
 
@@ -1041,6 +1043,7 @@ async function runScan() {
   if (!symbols) { toast('Missing Symbols', 'Enter at least one ticker', 'warn'); return; }
 
   $('scan-btn').disabled = true;
+  showProgress('scan-results-card', 'Scanning option chains...');
   $('scan-spinner').style.display = 'inline-block';
   $('scan-status').textContent = 'Scanning...';
   $('scan-results-card').style.display = 'none';
@@ -1048,6 +1051,7 @@ async function runScan() {
   const d = await api(`/api/scan?symbols=${encodeURIComponent(symbols)}&min_score=${minScore}&limit=${limit}`);
   $('scan-btn').disabled = false;
   $('scan-spinner').style.display = 'none';
+  hideProgress('scan-results-card');
 
   if (!d.ok) {
     toast('Scan Error', d.error, 'error');
