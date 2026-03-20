@@ -1036,8 +1036,7 @@ async function runScan() {
 
   $('scan-btn').disabled = true;
   $('scan-spinner').style.display = 'inline-block';
-  $('scan
-
+  $('scan-status').textContent = 'Scanning...';
   $('scan-results-card').style.display = 'none';
 
   const d = await api(`/api/scan?symbols=${encodeURIComponent(symbols)}&min_score=${minScore}&limit=${limit}`);
