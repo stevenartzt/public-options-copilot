@@ -887,7 +887,7 @@ function showPanel(name) {
 }
 
 // ── Formatting ──────────────────────────────────────────────────────────────
-const $ = id => document.getElementById(id);
+const $ = id => document.getElementById(id) || document.createElement('div');
 const fmt = {
   dollar: v => v == null ? '—' : (v >= 0 ? '+' : '') + '$' + Math.abs(v).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2}),
   dollarAbs: v => v == null ? '—' : '$' + Math.abs(v).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2}),

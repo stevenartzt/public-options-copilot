@@ -968,9 +968,11 @@ def api_history():
         return api_error(str(e))
 
     try:
-        start = (datetime.now() - timedelta(days=days)).strftime("%Y-%m-%d")
-        end   = datetime.now().strftime("%Y-%m-%d")
-        resp  = client.get_history(start_date=start, end_date=end)
+        from public_api_sdk import HistoryRequest
+        start_dt = datetime.now() - timedelta(days=days)
+        end_dt = datetime.now()
+        hist_req = HistoryRequest(start=start_dt, end=end_dt, page_size=100)
+        resp = client.get_history(history_request=hist_req)
         trades = []
         if isinstance(resp, dict):
             trades = resp.get('trades', resp.get('history', resp.get('orders', [])))
