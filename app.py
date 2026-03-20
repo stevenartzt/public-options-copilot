@@ -363,7 +363,7 @@ def api_scan():
         return api_error('yfinance not installed. Run: pip install yfinance numpy')
 
     # Import scoring helpers from scan.py
-    sys.path.insert(0, '/tmp/public-options-copilot/scripts')
+    sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'scripts'))
     try:
         # Temporarily swap sys.exit so the module-level check doesn't crash us
         import builtins
