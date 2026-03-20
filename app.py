@@ -225,11 +225,21 @@ def api_portfolio():
         all_symbols = []
         parsed = []
         for pos in positions:
-            sym       = get_attr(pos, 'symbol', 'ticker', default='')
+            # Public.com SDK: pos.instrument.symbol, pos.quantity, pos.cost_basis, etc.
+            if hasattr(pos, 'instrument') and hasattr(pos.instrument, 'symbol'):
+                sym = str(pos.instrument.symbol)
+            else:
+                sym = get_attr(pos, 'symbol', 'ticker', default='')
             qty       = safe_float(get_attr(pos, 'quantity', 'qty', 'shares', default=0))
-            avg_cost  = safe_float(get_attr(pos, 'averageCost', 'average_cost', 'costBasis', default=0))
-            mkt_val   = safe_float(get_attr(pos, 'marketValue', 'market_value', 'currentValue', default=0))
-            unrealised = safe_float(get_attr(pos, 'unrealizedPnl', 'unrealizedGainLoss', default=0))
+            if hasattr(pos, 'cost_basis') and pos.cost_basis:
+                avg_cost = safe_float(getattr(pos.cost_basis, 'unit_cost', 0))
+            else:
+                avg_cost  = safe_float(get_attr(pos, 'averageCost', 'average_cost', 'costBasis', default=0))
+            mkt_val   = safe_float(get_attr(pos, 'current_value', 'marketValue', 'market_value', default=0))
+            if hasattr(pos, 'cost_basis') and pos.cost_basis:
+                unrealised = safe_float(getattr(pos.cost_basis, 'gain_value', 0))
+            else:
+                unrealised = safe_float(get_attr(pos, 'unrealizedPnl', 'unrealizedGainLoss', default=0))
             parsed.append({'symbol': sym, 'qty': qty, 'avg_cost': avg_cost,
                            'market_val': mkt_val, 'unrealized': unrealised})
             if sym:
@@ -239,7 +249,10 @@ def api_portfolio():
         live_prices = {}
         if all_symbols:
             try:
-                quotes_resp = client.get_quotes(all_symbols)
+                from public_api_sdk.models.order import OrderInstrument
+                from public_api_sdk import InstrumentType
+                quote_instruments = [OrderInstrument(symbol=s, type=InstrumentType.OPTION if len(s) > 10 else InstrumentType.EQUITY) for s in all_symbols]
+                quotes_resp = client.get_quotes(quote_instruments)
                 quotes = []
                 if isinstance(quotes_resp, dict):
                     quotes = quotes_resp.get('quotes', list(quotes_resp.values()))
@@ -994,7 +1007,7 @@ def api_history():
         else:
             trades = getattr(resp, 'trades', None) or getattr(resp, 'history', []) or []
     except Exception as e:
-        return api_error(f'History fetch failed: {e}')
+        trades = []  # API error, return empty history
 
     # Parse trades
     FORMATS = [
