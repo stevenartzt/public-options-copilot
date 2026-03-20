@@ -372,7 +372,8 @@ def api_scan():
         score_opt  = scan_mod.score_option
     except Exception as e:
         sys.exit = real_exit
-        return api_error(f'Could not load scanner: {e}')
+        import traceback
+        return api_error(f'Could not load scanner: {e}\n{traceback.format_exc()}')
 
     all_signals = []
     errors = []
