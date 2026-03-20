@@ -14,6 +14,34 @@ Uses **real Greeks** (delta, IV, theta) from the Public.com API for every decisi
 
 ## Quick Start
 
+### 🌐 Web UI (Recommended — No Terminal Required)
+
+```bash
+# 1. Install dependencies
+pip install publicdotcom-py yfinance numpy flask flask-cors
+
+# 2. Set your credentials
+export PUBLIC_COM_SECRET=your_secret_key_here
+export PUBLIC_COM_ACCOUNT_ID=your_account_id_here
+
+# 3. Launch the web dashboard
+python3 app.py
+
+# 4. Open your browser
+# → http://localhost:8080
+```
+
+The web UI provides a full browser-based command center with:
+- 📊 **Portfolio Panel** — live positions, P/L, Greeks
+- 🔍 **Scanner Panel** — 12-factor scoring with presets (Tech, S&P, Healthcare)
+- 📐 **Spread Builder** — find & execute put/call credit spreads
+- 🔭 **Monitor Panel** — real-time P/L with auto-exit triggers
+- 📈 **History Panel** — trade history, win rate, P/L stats
+
+---
+
+### 💻 CLI (Terminal Power Users)
+
 ```bash
 # 1. Install dependencies
 pip install publicdotcom-py yfinance numpy

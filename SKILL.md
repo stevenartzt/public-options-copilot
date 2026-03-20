@@ -135,6 +135,50 @@ python3 scripts/history.py
 
 Shows win rate, total P/L, average win/loss, best/worst trades.
 
+## Optional Web UI
+
+A full browser-based dashboard is available for non-terminal users.
+
+### Starting the Web UI
+```bash
+pip install flask flask-cors
+python3 app.py
+# → http://localhost:8080
+```
+
+### Web UI Features
+- **Dashboard** — Single-page app, dark theme, mobile responsive
+- **Portfolio Panel** — Live positions, Greeks, P/L in a table
+- **Scanner Panel** — Watchlist input + presets, score slider, results with Trade buttons
+- **Trade Modal** — Auto-sized position, preflight preview, one-click execute
+- **Spread Builder** — Type/width/DTE controls, R/R table, Execute Spread button
+- **Monitor Panel** — Start/Stop toggle, live P/L refresh every 10s, Emergency Close All
+- **History Panel** — Trade history table, win rate, profit factor stats
+
+### API Endpoints
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `GET /api/status` | GET | Connection check + account info |
+| `GET /api/portfolio` | GET | Positions with live P/L and Greeks |
+| `GET /api/scan` | GET | Scanner — `?symbols=X&min_score=72` |
+| `POST /api/trade` | POST | Execute single-leg order |
+| `GET /api/spreads` | GET | Credit spreads — `?underlying=X&type=put_credit&width=5&dte=21` |
+| `GET /api/monitor/status` | GET | Monitor state + position list |
+| `POST /api/monitor/start` | POST | Start background monitor thread |
+| `POST /api/monitor/stop` | POST | Stop monitor |
+| `POST /api/monitor/close` | POST | Close position(s) |
+| `GET /api/history` | GET | Trade history + performance stats |
+
+### Environment Variables for Web UI
+Same as CLI — `PUBLIC_COM_SECRET`, `PUBLIC_COM_ACCOUNT_ID`, `COPILOT_READ_ONLY`.
+
+```bash
+# Safe demo mode — shows previews, no live orders
+COPILOT_READ_ONLY=true python3 app.py
+```
+
+---
+
 ## Safety & Security
 
 - **All keys in environment variables** — never hardcoded
@@ -196,3 +240,28 @@ User: "I'm worried about a market drop, hedge my portfolio"
 → Previews cost vs protection
 → Executes on confirmation
 ```
+
+### Launch Command Center (Web UI)
+When the user says "open command center", "launch UI", "start dashboard", or "open copilot on port XXXX":
+
+```bash
+python3 app.py --port {PORT} &
+```
+
+Default port is 8080. If the user specifies a port, use that instead.
+
+After launching, tell the user:
+- "Command Center running at http://localhost:{PORT}"
+- "Open your browser to access the dashboard"
+
+The UI provides all copilot features in a browser — no terminal needed:
+- Portfolio viewer with live P/L + Greeks
+- Options scanner with 12-factor scoring
+- One-click trade execution with preflight safety
+- Credit spread finder + executor
+- Position monitor with auto-exits
+- Trade history + performance stats
+
+The dashboard runs in the background — you can continue chatting with the agent while the UI is open. Both work concurrently, sharing the same API connection.
+
+To stop: the user says "stop command center" or "close dashboard".
