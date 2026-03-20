@@ -18,6 +18,12 @@ import time
 import threading
 import math
 from datetime import datetime, timedelta, time as dtime
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
 from flask import Flask, render_template, jsonify, request
 from flask_cors import CORS
 

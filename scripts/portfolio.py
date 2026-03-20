@@ -10,6 +10,11 @@ Usage:
 """
 
 import os
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
 import sys
 import argparse
 from datetime import datetime
