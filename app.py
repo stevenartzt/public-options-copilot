@@ -366,7 +366,10 @@ def api_scan():
 
             # Get expirations
             try:
-                exp_resp     = client.get_option_expirations(sym)
+                from public_api_sdk import OptionExpirationsRequest, InstrumentType
+                from public_api_sdk.models.order import OrderInstrument
+                exp_req = OptionExpirationsRequest(instrument=OrderInstrument(symbol=sym, type=InstrumentType.EQUITY))
+                exp_resp = client.get_option_expirations(exp_req)
                 expirations  = []
                 if isinstance(exp_resp, dict):
                     expirations = exp_resp.get('expirations', [])
@@ -386,14 +389,18 @@ def api_scan():
 
             # Get option chain
             try:
-                chain_resp = client.get_option_chain(sym, exp)
+                from public_api_sdk import OptionChainRequest
+                chain_resp = client.get_option_chain(OptionChainRequest(
+                    instrument=OrderInstrument(symbol=sym, type=InstrumentType.EQUITY),
+                    expiration_date=exp
+                ))
                 chain = []
-                if isinstance(chain_resp, list):
+                if hasattr(chain_resp, 'calls') and hasattr(chain_resp, 'puts'):
+                    chain = list(chain_resp.calls or []) + list(chain_resp.puts or [])
+                elif isinstance(chain_resp, list):
                     chain = chain_resp
                 elif isinstance(chain_resp, dict):
-                    chain = chain_resp.get('options', [])
-                else:
-                    chain = getattr(chain_resp, 'options', []) or []
+                    chain = chain_resp.get('calls', []) + chain_resp.get('puts', [])
             except Exception:
                 continue
 
