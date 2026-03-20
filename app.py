@@ -437,23 +437,35 @@ def api_scan():
             except Exception:
                 continue
 
-            for opt in chain:
+            # Tag options with their type from the list they came from
+            tagged_chain = []
+            if hasattr(chain_resp, 'calls') and chain_resp.calls:
+                for o in chain_resp.calls:
+                    tagged_chain.append(('call', o))
+            if hasattr(chain_resp, 'puts') and chain_resp.puts:
+                for o in chain_resp.puts:
+                    tagged_chain.append(('put', o))
+            if not tagged_chain:
+                for o in chain:
+                    tagged_chain.append(('unknown', o))
+
+            for otype, opt in tagged_chain:
                 try:
                     if isinstance(opt, dict):
-                        osi   = opt.get('symbol', '')
-                        otype = opt.get('optionType', opt.get('type', '')).lower()
-                        bid   = float(opt.get('bid', 0) or 0)
-                        ask   = float(opt.get('ask', 0) or 0)
-                        last  = float(opt.get('lastTradePrice', opt.get('last', 0)) or 0)
+                        osi  = opt.get('symbol', '')
+                        bid  = float(opt.get('bid', 0) or 0)
+                        ask  = float(opt.get('ask', 0) or 0)
+                        last = float(opt.get('last', 0) or 0)
                     else:
-                        osi   = getattr(opt, 'symbol', '')
-                        otype = (getattr(opt, 'optionType', '') or '').lower()
-                        bid   = float(getattr(opt, 'bid', 0) or 0)
-                        ask   = float(getattr(opt, 'ask', 0) or 0)
-                        last  = float(getattr(opt, 'lastTradePrice', None) or 0)
+                        osi  = str(getattr(opt.instrument, 'symbol', '')) if hasattr(opt, 'instrument') else str(getattr(opt, 'symbol', ''))
+                        bid  = float(getattr(opt, 'bid', 0) or 0)
+                        ask  = float(getattr(opt, 'ask', 0) or 0)
+                        last = float(getattr(opt, 'last', 0) or 0)
 
-                    if not osi or otype not in ('call', 'put'):
+                    if not osi:
                         continue
+                    if otype == 'unknown':
+                        otype = 'call' if 'C' in osi[12:14] else 'put'
                     entry = (bid + ask) / 2 if bid and ask else last
                     if entry <= 0:
                         continue
