@@ -656,7 +656,11 @@ def api_spreads():
 
     # Expirations
     try:
-        exp_resp    = client.get_option_expirations(underlying)
+        from public_api_sdk import OptionExpirationsRequest, InstrumentType
+        from public_api_sdk.models.order import OrderInstrument
+        exp_resp = client.get_option_expirations(OptionExpirationsRequest(
+            instrument=OrderInstrument(symbol=underlying, type=InstrumentType.EQUITY)
+        ))
         expirations = []
         if isinstance(exp_resp, dict):
             expirations = exp_resp.get('expirations', [])
@@ -690,7 +694,11 @@ def api_spreads():
 
     # Option chain
     try:
-        chain_resp = client.get_option_chain(underlying, best_exp)
+        from public_api_sdk import OptionChainRequest
+        chain_resp = client.get_option_chain(OptionChainRequest(
+            instrument=OrderInstrument(symbol=underlying, type=InstrumentType.EQUITY),
+            expiration_date=best_exp
+        ))
         chain = []
         if isinstance(chain_resp, list):
             chain = chain_resp
