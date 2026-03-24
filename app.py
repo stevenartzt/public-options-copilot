@@ -1047,7 +1047,7 @@ def api_backtest():
         df.columns = ['close']
         
         # Generate signals based on strategy
-        if strategy == 'sma_cross':
+        if strategy in ('sma_cross', 'sma_crossover'):
             fast = params.get('fast', 10)
             slow = params.get('slow', 30)
             df['fast_sma'] = df['close'].rolling(fast).mean()
@@ -1349,4 +1349,10 @@ if __name__ == '__main__':
     print(f"Server: http://localhost:5006")
     print(f"API configured: {bool(get_api_secret() and get_account_id())}")
     print("="*60 + "\n")
-    app.run(host='0.0.0.0', port=5006, debug=True)
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--host", default="127.0.0.1")
+    parser.add_argument("--port", type=int, default=5006)
+    parser.add_argument("--debug", action="store_true")
+    args = parser.parse_args()
+    app.run(host=args.host, port=args.port, debug=args.debug)
