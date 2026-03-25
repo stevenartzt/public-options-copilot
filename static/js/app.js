@@ -133,7 +133,11 @@ async function loadDashboard() {
                 <div class="icon">${sector.icon}</div>
                 <div class="name">${sector.sector}</div>
                 <div class="change ${sector.change_pct >= 0 ? 'positive' : 'negative'}">
-                    ${sector.change_pct >= 0 ? '+' : ''}${sector.change_pct.toFixed(2)}%
+                    Today: ${sector.change_pct >= 0 ? '+' : ''}${sector.change_pct.toFixed(2)}%
+                </div>
+                <div class="change-detail" style="font-size:0.75em;display:flex;gap:8px;margin-top:2px;">
+                    <span class="${sector.week_change_pct >= 0 ? 'positive' : 'negative'}">W: ${sector.week_change_pct >= 0 ? '+' : ''}${sector.week_change_pct.toFixed(1)}%</span>
+                    <span class="${sector.month_change_pct >= 0 ? 'positive' : 'negative'}">M: ${sector.month_change_pct >= 0 ? '+' : ''}${sector.month_change_pct.toFixed(1)}%</span>
                 </div>
                 <div class="sentiment ${sector.sentiment.toLowerCase()}">${sector.sentiment}</div>
             </div>

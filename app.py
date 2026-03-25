@@ -17,6 +17,7 @@ from services.portfolio import get_portfolio_service
 from services.trading import get_trading_service
 from services.scanner import get_scanner
 from services.indicators import get_indicator_service
+from services.algo_trading import get_algo_trading_service
 
 
 # Initialize Flask app
@@ -33,13 +34,15 @@ portfolio_service = get_portfolio_service()
 trading_service = get_trading_service()
 scanner = get_scanner()
 indicator_service = get_indicator_service()
+algo_service = get_algo_trading_service()
 
-# SPY Scalper game state
+# SPY Scalper game state (persistent)
 spy_game = {
     'position': None,  # {'side': 'long'/'short', 'entry': price, 'quantity': 100}
     'pnl': 0.0,
     'trades': 0,
-    'high_score': 0.0
+    'high_score': 0.0,
+    'price_history': []  # Last 50 prices for mini chart
 }
 
 
