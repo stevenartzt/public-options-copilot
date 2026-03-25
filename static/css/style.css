@@ -205,9 +205,52 @@ body {
 /* Sector Grid */
 .sector-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-    gap: 10px;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
 }
+
+@media (max-width: 1200px) {
+    .sector-grid { grid-template-columns: repeat(3, 1fr); }
+}
+
+@media (max-width: 800px) {
+    .sector-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+.sector-card { cursor: pointer; }
+.sector-card.selected { border-color: var(--primary); box-shadow: 0 0 12px rgba(99,102,241,0.3); }
+
+.sector-detail {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 20px;
+    margin-top: 16px;
+    display: none;
+}
+
+.sector-detail.active { display: block; }
+
+.sector-detail h3 { margin: 0 0 12px 0; color: var(--primary); }
+
+.leader-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.leader-card {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 10px;
+    text-align: center;
+    font-size: 13px;
+}
+
+.leader-card .ticker { font-weight: 700; color: var(--text-primary); }
+.leader-card .leader-change { font-weight: 600; margin-top: 4px; }
 
 .sector-card {
     background: var(--bg-card);

@@ -191,16 +191,22 @@ async function loadDashboard() {
         
         // Sector grid
         const grid = document.getElementById('sector-grid');
-        grid.innerHTML = data.sectors.map(sector => `
-            <div class="sector-card">
+        window._sectorData = data.sectors;
+        grid.innerHTML = data.sectors.map((sector, i) => {
+            const fmt = (v) => `${v >= 0 ? '+' : ''}${v.toFixed(1)}%`;
+            const cls = (v) => v >= 0 ? 'positive' : 'negative';
+            return `
+            <div class="sector-card" onclick="showSectorDetail(${i})">
                 <div class="icon">${sector.icon}</div>
                 <div class="name">${sector.sector}</div>
-                <div class="change ${sector.change_pct >= 0 ? 'positive' : 'negative'}">
-                    ${sector.change_pct >= 0 ? '+' : ''}${sector.change_pct.toFixed(2)}%
+                <div class="change ${cls(sector.change_pct)}">${fmt(sector.change_pct)}</div>
+                <div class="change-detail">
+                    <span class="${cls(sector.week_change_pct)}">W ${fmt(sector.week_change_pct)}</span>
+                    <span class="${cls(sector.month_change_pct)}">M ${fmt(sector.month_change_pct)}</span>
                 </div>
                 <div class="sentiment ${sector.sentiment.toLowerCase()}">${sector.sentiment}</div>
-            </div>
-        `).join('');
+            </div>`;
+        }).join('');
     }
     
     // Load SPY
@@ -1226,3 +1232,63 @@ document.getElementById('order-form').addEventListener('submit', async (e) => {
 // ================== Start App ==================
 
 init();
+// Sector leading tickers
+const SECTOR_LEADERS = {
+    'Technology': ['AAPL','MSFT','NVDA','GOOGL','META','AMZN','CRM','ORCL','ADBE'],
+    'Financials': ['JPM','BAC','GS','V','MA','BLK','SCHW','MS','C'],
+    'Healthcare': ['UNH','JNJ','LLY','ABBV','MRK','PFE','TMO','ABT','ISRG'],
+    'Energy': ['XOM','CVX','COP','SLB','EOG','MPC','OXY','VLO','DVN'],
+    'Consumer Discretionary': ['AMZN','TSLA','HD','MCD','NKE','SBUX','LOW','TJX','CMG'],
+    'Industrials': ['CAT','GE','HON','UPS','BA','RTX','DE','LMT','FDX'],
+    'Materials': ['LIN','APD','SHW','FCX','NUE','ECL','VMC','MLM','NEM'],
+    'Utilities': ['NEE','SO','DUK','CEG','SRE','AEP','D','EXC','PCG'],
+    'Real Estate': ['PLD','AMT','EQIX','SPG','O','DLR','WELL','AVB','EQR'],
+    'Consumer Staples': ['PG','KO','PEP','COST','WMT','PM','CL','MO','GIS'],
+    'Communication': ['META','GOOGL','NFLX','DIS','CMCSA','TMUS','T','VZ','CHTR']
+};
+
+async function showSectorDetail(idx) {
+    const sector = window._sectorData[idx];
+    const detail = document.getElementById('sector-detail');
+    const leaders = SECTOR_LEADERS[sector.sector] || [];
+    
+    // Highlight selected card
+    document.querySelectorAll('.sector-card').forEach((c, i) => c.classList.toggle('selected', i === idx));
+    
+    detail.innerHTML = `<h3>${sector.icon} ${sector.sector} — ${sector.sentiment}</h3>
+        <div style="display:flex;gap:24px;margin-bottom:16px;font-size:14px;">
+            <span>Today: <b class="${sector.change_pct >= 0 ? 'positive' : 'negative'}">${sector.change_pct >= 0 ? '+' : ''}${sector.change_pct.toFixed(2)}%</b></span>
+            <span>Week: <b class="${sector.week_change_pct >= 0 ? 'positive' : 'negative'}">${sector.week_change_pct >= 0 ? '+' : ''}${sector.week_change_pct.toFixed(1)}%</b></span>
+            <span>Month: <b class="${sector.month_change_pct >= 0 ? 'positive' : 'negative'}">${sector.month_change_pct >= 0 ? '+' : ''}${sector.month_change_pct.toFixed(1)}%</b></span>
+            <span>ETF: <b>${sector.etf}</b> @ $${sector.price.toFixed(2)}</span>
+        </div>
+        <div style="margin-bottom:8px;color:var(--text-secondary);font-size:13px;">${(sector.reasons||[]).join(' · ') || 'Mixed signals'}</div>
+        <h4 style="margin:16px 0 8px;">Leading Tickers</h4>
+        <div class="leader-grid" id="leader-grid"><div class="loading">Loading...</div></div>`;
+    detail.classList.add('active');
+    
+    // Fetch leader data
+    if (leaders.length > 0) {
+        const quotes = await Promise.all(leaders.slice(0, 8).map(async (ticker) => {
+            try {
+                const q = await api('/api/quote/' + ticker);
+                return q.success ? { ticker, ...q.quote } : { ticker, price: 0, change_percent: 0 };
+            } catch { return { ticker, price: 0, change_percent: 0 }; }
+        }));
+        
+        document.getElementById('leader-grid').innerHTML = quotes.map(q => {
+            const chg = q.change_percent || 0;
+            return `<div class="leader-card" onclick="analyzeTicker('${q.ticker}')" style="cursor:pointer;">
+                <div class="ticker">${q.ticker}</div>
+                <div style="font-size:12px;color:var(--text-secondary);">$${(q.price||0).toFixed(2)}</div>
+                <div class="leader-change ${chg >= 0 ? 'positive' : 'negative'}">${chg >= 0 ? '+' : ''}${chg.toFixed(2)}%</div>
+            </div>`;
+        }).join('');
+    }
+}
+
+function analyzeTicker(ticker) {
+    document.getElementById('ticker-input').value = ticker;
+    showSection('trading');
+    document.getElementById('analyze-btn')?.click();
+}
