@@ -149,8 +149,29 @@ PUBLIC_COM_ACCOUNT_ID=your_account_id</pre>
             <section id="trading" class="section">
                 <h1>Trading</h1>
                 
+                <!-- Sector Quick-Pick -->
+                <div style="margin-bottom:16px;">
+                    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;">
+                        <button class="btn btn-sm" onclick="showSectorTickers('tech')" style="font-size:12px;">💻 Tech</button>
+                        <button class="btn btn-sm" onclick="showSectorTickers('finance')" style="font-size:12px;">🏦 Finance</button>
+                        <button class="btn btn-sm" onclick="showSectorTickers('healthcare')" style="font-size:12px;">💊 Healthcare</button>
+                        <button class="btn btn-sm" onclick="showSectorTickers('energy')" style="font-size:12px;">⛽ Energy</button>
+                        <button class="btn btn-sm" onclick="showSectorTickers('consumer')" style="font-size:12px;">🛒 Consumer</button>
+                        <button class="btn btn-sm" onclick="showSectorTickers('industrial')" style="font-size:12px;">🏗️ Industrial</button>
+                        <button class="btn btn-sm" onclick="showSectorTickers('semi')" style="font-size:12px;">🔌 Semi</button>
+                    </div>
+                    <div id="sector-ticker-pills" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
+                </div>
+
                 <div class="search-container">
                     <input type="text" id="ticker-search" placeholder="Enter ticker symbol (e.g., AAPL)" class="search-input">
+                    <select id="chart-timeframe" style="padding:8px 12px;border-radius:6px;background:var(--bg-card);color:var(--text-primary);border:1px solid var(--border-color);font-size:14px;">
+                        <option value="1mo">1 Month</option>
+                        <option value="3mo" selected>3 Months</option>
+                        <option value="6mo">6 Months</option>
+                        <option value="1y">1 Year</option>
+                        <option value="5d">5 Days</option>
+                    </select>
                     <button id="search-btn" class="btn btn-primary">Analyze</button>
                 </div>
                 

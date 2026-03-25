@@ -563,7 +563,8 @@ async function analyzeTicker() {
 }
 
 async function loadChart(symbol) {
-    const chart = await api(`/api/chart/${symbol}`);
+    const period = document.getElementById('chart-timeframe')?.value || '3mo';
+    const chart = await api(`/api/chart/${symbol}?period=${period}`);
     if (!chart.success) return;
     
     const data = chart.data;
@@ -1291,4 +1292,28 @@ function analyzeTicker(ticker) {
     document.getElementById('ticker-input').value = ticker;
     showSection('trading');
     document.getElementById('analyze-btn')?.click();
+}
+
+// Sector quick-pick tickers for Trading tab
+const TRADING_SECTORS = {
+    tech: ['AAPL','MSFT','NVDA','GOOGL','META','AMZN','CRM','ADBE','ORCL','INTC'],
+    finance: ['JPM','BAC','GS','V','MA','BLK','MS','C','SCHW','AXP'],
+    healthcare: ['UNH','JNJ','LLY','ABBV','MRK','PFE','TMO','ISRG','ELV','CVS'],
+    energy: ['XOM','CVX','COP','SLB','EOG','MPC','OXY','VLO','HAL','DVN'],
+    consumer: ['AMZN','TSLA','HD','MCD','NKE','SBUX','LOW','TJX','COST','WMT'],
+    industrial: ['CAT','GE','HON','UPS','BA','RTX','DE','LMT','FDX','UNP'],
+    semi: ['NVDA','AMD','AVGO','QCOM','TXN','MU','AMAT','LRCX','KLAC','MCHP'],
+};
+
+function showSectorTickers(sector) {
+    const tickers = TRADING_SECTORS[sector] || [];
+    const container = document.getElementById('sector-ticker-pills');
+    container.innerHTML = tickers.map(t => 
+        `<button class="btn btn-sm" onclick="quickAnalyze('${t}')" style="font-size:11px;padding:4px 10px;background:var(--bg-tertiary);border:1px solid var(--border-color);cursor:pointer;">${t}</button>`
+    ).join('');
+}
+
+function quickAnalyze(ticker) {
+    document.getElementById('ticker-search').value = ticker;
+    document.getElementById('search-btn').click();
 }
