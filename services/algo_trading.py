@@ -193,6 +193,7 @@ class AlgoTradingService:
         self.forward_test_positions: Dict[str, Dict] = {}  # strategy_id -> {symbol -> position}
         
         self._load_state()
+        self._ensure_examples()
     
     def _load_state(self):
         """Load strategies from file."""
@@ -226,6 +227,58 @@ class AlgoTradingService:
                 
         except Exception as e:
             print(f"Error saving algo trading state: {e}")
+    
+    def _ensure_examples(self):
+        """Add example strategies if none exist."""
+        if len(self.strategies) > 0:
+            return
+        
+        examples = [
+            {
+                'name': 'RSI Mean Reversion',
+                'symbols': ['SPY', 'AAPL', 'MSFT', 'NVDA'],
+                'entry_conditions': [{'type': 'rsi_below', 'value': 30}],
+                'exit_conditions': [{'type': 'profit_above', 'value': 10}, {'type': 'loss_above', 'value': 5}, {'type': 'hold_days_above', 'value': 5}],
+                'position_size_pct': 20,
+                'max_positions': 3,
+                'stop_loss_pct': 5,
+                'take_profit_pct': 10,
+            },
+            {
+                'name': 'MACD Momentum',
+                'symbols': ['AAPL', 'NVDA', 'AMD', 'TSLA'],
+                'entry_conditions': [{'type': 'macd_bullish', 'value': 0}, {'type': 'trend_bullish', 'value': 0}],
+                'exit_conditions': [{'type': 'profit_above', 'value': 8}, {'type': 'loss_above', 'value': 4}],
+                'position_size_pct': 15,
+                'max_positions': 4,
+                'stop_loss_pct': 4,
+                'take_profit_pct': 8,
+            },
+            {
+                'name': 'Trend + Volatility',
+                'symbols': ['SPY', 'QQQ'],
+                'entry_conditions': [{'type': 'price_above_sma50', 'value': 0}, {'type': 'atr_pct_above', 'value': 1.5}],
+                'exit_conditions': [{'type': 'profit_above', 'value': 5}, {'type': 'loss_above', 'value': 3}, {'type': 'hold_days_above', 'value': 10}],
+                'position_size_pct': 25,
+                'max_positions': 2,
+                'stop_loss_pct': 3,
+                'take_profit_pct': 5,
+            },
+            {
+                'name': 'RSI Overbought Short',
+                'symbols': ['SPY', 'AAPL', 'MSFT'],
+                'entry_conditions': [{'type': 'rsi_above', 'value': 70}, {'type': 'regime_trending', 'value': 0}],
+                'exit_conditions': [{'type': 'profit_above', 'value': 5}, {'type': 'loss_above', 'value': 3}],
+                'position_size_pct': 15,
+                'max_positions': 2,
+                'stop_loss_pct': 3,
+                'take_profit_pct': 5,
+            },
+        ]
+        
+        for ex in examples:
+            self.create_strategy(**ex)
+        print(f"[Algo] Loaded {len(examples)} example strategies")
     
     def create_strategy(self, name: str, symbols: List[str], 
                        entry_conditions: List[Dict], exit_conditions: List[Dict],
@@ -541,7 +594,7 @@ class AlgoTradingService:
         
         # Close any remaining positions at the end
         if positions:
-            last_date = dates[-1]
+            last_date = primary_hist.index[-1].strftime('%Y-%m-%d')
             for symbol, pos in list(positions.items()):
                 if symbol in all_data:
                     hist = all_data[symbol]
