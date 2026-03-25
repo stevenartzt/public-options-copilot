@@ -1301,9 +1301,9 @@ async function showSectorDetail(idx) {
 }
 
 function analyzeTicker(ticker) {
-    document.getElementById('ticker-input').value = ticker;
+    document.getElementById('ticker-search').value = ticker;
     showSection('trading');
-    document.getElementById('analyze-btn')?.click();
+    document.getElementById('search-btn')?.click();
 }
 
 // Sector quick-pick tickers for Trading tab
