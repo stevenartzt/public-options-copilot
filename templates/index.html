@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Options Copilot - Public.com</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <nav class="sidebar">
+            <div class="logo">
+                <span class="logo-icon">📊</span>
+                <span class="logo-text">Options Copilot</span>
+            </div>
+            
+            <div class="nav-links">
+                <a href="#" class="nav-item active" data-section="dashboard">
+                    <span class="nav-icon">📊</span>
+                    <span>Dashboard</span>
+                </a>
+                <a href="#" class="nav-item" data-section="portfolio">
+                    <span class="nav-icon">💼</span>
+                    <span>Portfolio</span>
+                </a>
+                <a href="#" class="nav-item" data-section="trading">
+                    <span class="nav-icon">📈</span>
+                    <span>Trading</span>
+                </a>
+                <a href="#" class="nav-item" data-section="scanner">
+                    <span class="nav-icon">🔍</span>
+                    <span>Scanner</span>
+                </a>
+                <a href="#" class="nav-item" data-section="paper">
+                    <span class="nav-icon">📝</span>
+                    <span>Paper Trading</span>
+                </a>
+                <a href="#" class="nav-item" data-section="spy-game">
+                    <span class="nav-icon">⚡</span>
+                    <span>SPY Scalper</span>
+                </a>
+                <a href="#" class="nav-item" data-section="settings">
+                    <span class="nav-icon">⚙️</span>
+                    <span>Settings</span>
+                </a>
+            </div>
+            
+            <div class="sidebar-footer">
+                <div class="api-status" id="api-status">
+                    <span class="status-dot"></span>
+                    <span class="status-text">Checking...</span>
+                </div>
+            </div>
+        </nav>
+        
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Dashboard Section -->
+            <section id="dashboard" class="section active">
+                <h1>Dashboard</h1>
+                
+                <div class="cards-row">
+                    <div class="card stat-card">
+                        <div class="stat-label">VIX</div>
+                        <div class="stat-value" id="vix-value">--</div>
+                        <div class="stat-change" id="vix-interpretation">Loading...</div>
+                    </div>
+                    <div class="card stat-card">
+                        <div class="stat-label">SPY</div>
+                        <div class="stat-value" id="spy-price">--</div>
+                        <div class="stat-change" id="spy-change">--</div>
+                    </div>
+                    <div class="card stat-card">
+                        <div class="stat-label">Market Sentiment</div>
+                        <div class="stat-value" id="overall-sentiment">--</div>
+                        <div class="stat-change" id="breadth-info">--</div>
+                    </div>
+                </div>
+                
+                <h2>Sector Sentiment</h2>
+                <div class="sector-grid" id="sector-grid">
+                    <div class="loading">Loading sentiment data...</div>
+                </div>
+            </section>
+            
+            <!-- Portfolio Section -->
+            <section id="portfolio" class="section">
+                <h1>Portfolio</h1>
+                
+                <div class="tabs">
+                    <button class="tab active" data-tab="real-portfolio">Real Portfolio</button>
+                    <button class="tab" data-tab="paper-portfolio">Paper Portfolio</button>
+                </div>
+                
+                <div class="tab-content active" id="real-portfolio">
+                    <div id="real-portfolio-content">
+                        <div class="no-api-message" id="no-api-message">
+                            <h3>🔐 Connect Your Account</h3>
+                            <p>Add your Public.com API credentials in <code>.env</code> to view your real portfolio and enable live trading.</p>
+                            <pre>PUBLIC_COM_SECRET=your_api_secret
+PUBLIC_COM_ACCOUNT_ID=your_account_id</pre>
+                        </div>
+                        <div id="portfolio-data" style="display: none;">
+                            <div class="cards-row">
+                                <div class="card stat-card">
+                                    <div class="stat-label">Total Equity</div>
+                                    <div class="stat-value" id="real-equity">$0.00</div>
+                                </div>
+                                <div class="card stat-card">
+                                    <div class="stat-label">Cash</div>
+                                    <div class="stat-value" id="real-cash">$0.00</div>
+                                </div>
+                                <div class="card stat-card">
+                                    <div class="stat-label">Buying Power</div>
+                                    <div class="stat-value" id="real-buying-power">$0.00</div>
+                                </div>
+                            </div>
+                            <h3>Positions</h3>
+                            <table class="data-table" id="real-positions-table">
+                                <thead>
+                                    <tr>
+                                        <th>Symbol</th>
+                                        <th>Qty</th>
+                                        <th>Avg Price</th>
+                                        <th>Current</th>
+                                        <th>P/L</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="tab-content" id="paper-portfolio">
+                    <!-- Paper portfolio loaded dynamically -->
+                </div>
+            </section>
+            
+            <!-- Trading Section -->
+            <section id="trading" class="section">
+                <h1>Trading</h1>
+                
+                <div class="search-container">
+                    <input type="text" id="ticker-search" placeholder="Enter ticker symbol (e.g., AAPL)" class="search-input">
+                    <button id="search-btn" class="btn btn-primary">Analyze</button>
+                </div>
+                
+                <div id="ticker-analysis" style="display: none;">
+                    <div class="cards-row">
+                        <div class="card">
+                            <h3 id="ticker-symbol">--</h3>
+                            <div class="ticker-price" id="ticker-price">$--</div>
+                            <div class="ticker-change" id="ticker-change">--</div>
+                        </div>
+                        <div class="card">
+                            <h4>Trend</h4>
+                            <div class="trend-badge" id="trend-badge">--</div>
+                            <div class="trend-strength">Strength: <span id="trend-strength">--</span>%</div>
+                        </div>
+                        <div class="card">
+                            <h4>Indicators</h4>
+                            <div class="indicator-row">RSI: <span id="ticker-rsi">--</span></div>
+                            <div class="indicator-row">IV Rank: <span id="ticker-iv">--</span>%</div>
+                            <div class="indicator-row">Regime: <span id="ticker-regime">--</span></div>
+                        </div>
+                    </div>
+                    
+                    <div id="price-chart" class="chart-container"></div>
+                    
+                    <h3>Option Chain</h3>
+                    <div class="option-chain-controls">
+                        <select id="expiration-select" class="select-input">
+                            <option value="">Select Expiration</option>
+                        </select>
+                    </div>
+                    <div id="option-chain-container">
+                        <div class="chain-side">
+                            <h4>Calls</h4>
+                            <table class="data-table" id="calls-table">
+                                <thead>
+                                    <tr>
+                                        <th>Strike</th>
+                                        <th>Bid</th>
+                                        <th>Ask</th>
+                                        <th>Volume</th>
+                                        <th>OI</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="chain-side">
+                            <h4>Puts</h4>
+                            <table class="data-table" id="puts-table">
+                                <thead>
+                                    <tr>
+                                        <th>Strike</th>
+                                        <th>Bid</th>
+                                        <th>Ask</th>
+                                        <th>Volume</th>
+                                        <th>OI</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Scanner Section -->
+            <section id="scanner" class="section">
+                <h1>Options Scanner</h1>
+                
+                <div class="scanner-controls">
+                    <select id="preset-select" class="select-input">
+                        <option value="default">Default Watchlist</option>
+                        <option value="bluechip">Blue Chip</option>
+                        <option value="tech">Technology</option>
+                        <option value="finance">Financials</option>
+                        <option value="healthcare">Healthcare</option>
+                        <option value="energy">Energy</option>
+                        <option value="volatile">High Volatility</option>
+                    </select>
+                    <button id="scan-btn" class="btn btn-primary">🔍 Scan Now</button>
+                </div>
+                
+                <div class="filter-row">
+                    <label>Min Volume: <input type="number" id="min-volume" value="50" class="num-input"></label>
+                    <label>Min OI: <input type="number" id="min-oi" value="100" class="num-input"></label>
+                    <label>Max DTE: <input type="number" id="max-dte" value="45" class="num-input"></label>
+                    <label>Limit: <input type="number" id="scan-limit" value="10" class="num-input"></label>
+                </div>
+                
+                <div id="scan-results">
+                    <p class="placeholder-text">Click "Scan Now" to find options opportunities</p>
+                </div>
+            </section>
+            
+            <!-- Paper Trading Section -->
+            <section id="paper" class="section">
+                <h1>Paper Trading</h1>
+                
+                <div class="cards-row">
+                    <div class="card stat-card">
+                        <div class="stat-label">Total Equity</div>
+                        <div class="stat-value" id="paper-equity">$10,000.00</div>
+                    </div>
+                    <div class="card stat-card">
+                        <div class="stat-label">Cash</div>
+                        <div class="stat-value" id="paper-cash">$10,000.00</div>
+                    </div>
+                    <div class="card stat-card">
+                        <div class="stat-label">Total Return</div>
+                        <div class="stat-value" id="paper-return">$0.00 (0.00%)</div>
+                    </div>
+                    <div class="card stat-card">
+                        <div class="stat-label">Win Rate</div>
+                        <div class="stat-value" id="paper-winrate">0%</div>
+                    </div>
+                </div>
+                
+                <div class="paper-actions">
+                    <h3>Quick Trade</h3>
+                    <div class="trade-form">
+                        <input type="text" id="paper-symbol" placeholder="Symbol" class="input">
+                        <input type="number" id="paper-qty" placeholder="Quantity" class="input">
+                        <input type="number" id="paper-price" placeholder="Price (optional)" class="input" step="0.01">
+                        <button id="paper-buy-btn" class="btn btn-success">Buy</button>
+                        <button id="paper-sell-btn" class="btn btn-danger">Sell</button>
+                    </div>
+                </div>
+                
+                <h3>Positions</h3>
+                <table class="data-table" id="paper-positions-table">
+                    <thead>
+                        <tr>
+                            <th>Symbol</th>
+                            <th>Qty</th>
+                            <th>Avg Price</th>
+                            <th>Current</th>
+                            <th>P/L</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+                
+                <h3>Trade History</h3>
+                <table class="data-table" id="paper-history-table">
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Symbol</th>
+                            <th>Side</th>
+                            <th>Qty</th>
+                            <th>Price</th>
+                            <th>Total</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+                
+                <button id="paper-reset-btn" class="btn btn-danger" style="margin-top: 20px;">Reset Portfolio</button>
+            </section>
+            
+            <!-- SPY Scalper Game -->
+            <section id="spy-game" class="section">
+                <h1>⚡ SPY Scalper Game</h1>
+                <p class="section-desc">Test your scalping skills! Buy low, sell high.</p>
+                
+                <div class="game-container">
+                    <div class="cards-row">
+                        <div class="card stat-card">
+                            <div class="stat-label">SPY Price</div>
+                            <div class="stat-value" id="game-spy-price">$--</div>
+                        </div>
+                        <div class="card stat-card">
+                            <div class="stat-label">Position</div>
+                            <div class="stat-value" id="game-position">None</div>
+                        </div>
+                        <div class="card stat-card">
+                            <div class="stat-label">Current P/L</div>
+                            <div class="stat-value" id="game-current-pnl">$0.00</div>
+                        </div>
+                    </div>
+                    
+                    <div class="cards-row">
+                        <div class="card stat-card">
+                            <div class="stat-label">Session P/L</div>
+                            <div class="stat-value" id="game-session-pnl">$0.00</div>
+                        </div>
+                        <div class="card stat-card">
+                            <div class="stat-label">Trades</div>
+                            <div class="stat-value" id="game-trades">0</div>
+                        </div>
+                        <div class="card stat-card">
+                            <div class="stat-label">High Score</div>
+                            <div class="stat-value" id="game-high-score">$0.00</div>
+                        </div>
+                    </div>
+                    
+                    <div id="spy-chart" class="chart-container" style="height: 300px;"></div>
+                    
+                    <div class="game-buttons">
+                        <button id="game-buy-btn" class="btn btn-success btn-large">📈 BUY</button>
+                        <button id="game-sell-btn" class="btn btn-danger btn-large">📉 SELL</button>
+                        <button id="game-reset-btn" class="btn btn-secondary">Reset Game</button>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Settings Section -->
+            <section id="settings" class="section">
+                <h1>Settings</h1>
+                
+                <div class="card">
+                    <h3>API Configuration</h3>
+                    <p>To enable live trading, add your Public.com API credentials to the <code>.env</code> file:</p>
+                    <pre class="code-block">
+PUBLIC_COM_SECRET=your_api_secret_here
+PUBLIC_COM_ACCOUNT_ID=your_account_id_here</pre>
+                    <p>Restart the application after updating credentials.</p>
+                </div>
+                
+                <div class="card">
+                    <h3>Indicator Settings</h3>
+                    <div id="indicator-toggles">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <h3>About</h3>
+                    <p><strong>Options Copilot</strong> - Competition Entry for Public.com</p>
+                    <p>Features:</p>
+                    <ul>
+                        <li>📊 Real-time market sentiment analysis</li>
+                        <li>💼 Portfolio management (real & paper)</li>
+                        <li>📈 Technical analysis with indicators</li>
+                        <li>🔍 Edge-based options scanner</li>
+                        <li>📝 Paper trading for practice</li>
+                        <li>⚡ SPY Scalper game</li>
+                    </ul>
+                </div>
+            </section>
+        </main>
+    </div>
+    
+    <!-- Order Modal -->
+    <div class="modal" id="order-modal">
+        <div class="modal-content">
+            <span class="close-btn">&times;</span>
+            <h2 id="modal-title">Place Order</h2>
+            <form id="order-form">
+                <div class="form-group">
+                    <label>Symbol</label>
+                    <input type="text" id="order-symbol" readonly class="input">
+                </div>
+                <div class="form-group">
+                    <label>Side</label>
+                    <select id="order-side" class="select-input">
+                        <option value="BUY">Buy</option>
+                        <option value="SELL">Sell</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Quantity</label>
+                    <input type="number" id="order-quantity" value="1" min="1" class="input">
+                </div>
+                <div class="form-group">
+                    <label>Limit Price</label>
+                    <input type="number" id="order-price" step="0.01" class="input">
+                </div>
+                <div class="form-group">
+                    <label>Account</label>
+                    <select id="order-account" class="select-input">
+                        <option value="paper">Paper Account</option>
+                        <option value="real">Real Account</option>
+                    </select>
+                </div>
+                <div id="preflight-info" class="preflight-info"></div>
+                <div class="modal-buttons">
+                    <button type="button" id="preview-btn" class="btn btn-secondary">Preview</button>
+                    <button type="submit" class="btn btn-primary">Place Order</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <script src="/static/js/app.js"></script>
+</body>
+</html>

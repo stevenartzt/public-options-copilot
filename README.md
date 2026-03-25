@@ -1,171 +1,200 @@
-# Options Copilot — Public.com Trading Dashboard
+# Options Copilot
 
-A powerful options trading dashboard built for the Public.com Options Competition. Features real-time portfolio tracking, options trading, strategy backtesting, paper trading, and a gamified SPY scalping game.
+**Public.com Options Trading Competition Entry**
 
-![Dashboard Preview](https://img.shields.io/badge/Status-Competition%20Ready-brightgreen)
+A comprehensive options trading assistant featuring real-time analysis, paper trading, and live trading integration with Public.com.
+
+![Dashboard](https://via.placeholder.com/800x400?text=Options+Copilot+Dashboard)
 
 ## Features
 
-### 💼 Portfolio View
-- Real-time positions with P/L tracking
-- Account equity and buying power
-- Visual allocation charts
-- Open orders management
+### 📊 Dashboard
+- Real-time VIX and SPY monitoring
+- Per-sector market sentiment analysis
+- Market breadth indicators
+- No API key required - uses free yfinance data
 
-### 📊 Trading Interface
-- Ticker search with live quotes
-- Interactive price charts
-- Option chain browser (calls/puts grid)
+### 💼 Portfolio Management
+- **Real Portfolio**: View your Public.com positions with live P/L
+- **Paper Portfolio**: Practice trading with $10,000 virtual funds
+- Position tracking with Greeks and key metrics
+
+### 📈 Trading
+- Ticker search with full technical analysis
+- Interactive price charts with indicators (SMA, EMA, Bollinger Bands, MACD, RSI)
+- Option chain viewer with bid/ask, volume, and open interest
 - One-click order placement
-- Stock and options trading
 
-### 🧪 Strategy Backtester
-- Pre-built strategies: SMA Crossover, RSI Mean Reversion, Breakout
-- Custom parameter tuning
-- Performance metrics: Sharpe ratio, max drawdown, win rate, profit factor
-- Visual equity curves
-- Trade history analysis
+### 🔍 Options Scanner
+- Edge-based signal generation (STRONG_BUY, BUY)
+- Directional alignment (calls on uptrend, puts on downtrend)
+- IV rank scoring (buy low IV)
+- Win probability estimation
+- Preset watchlists (Tech, Finance, Healthcare, Energy, etc.)
 
 ### 📝 Paper Trading
-- Virtual $10,000 portfolio
-- Simulated trades using real market data
-- P/L tracking and win/loss statistics
-- Forward test strategies risk-free
+- Virtual portfolio starting at $10,000
+- Full trade history with P/L tracking
+- Win/loss statistics
+- Reset capability for fresh starts
 
 ### ⚡ SPY Scalper Game
 - Real-time SPY price tracking
-- Gamified trading practice
-- Session P/L and trade statistics
-- High score leaderboard
+- Buy/Sell with immediate feedback
+- Session P/L and high score tracking
+- Fun gamification element
 
-### 🎯 Strategy Manager
-- Save and manage backtested strategies
-- Toggle between paper and live modes
-- Push winning strategies to production
+### ⚙️ Settings
+- API credential management
+- Toggleable chart indicators
 
 ## Quick Start
 
-### 1. Clone the repository
+### 1. Clone the Repository
 ```bash
 git clone https://github.com/stevenartzt/public-options-copilot.git
 cd public-options-copilot
 ```
 
-### 2. Create virtual environment
+### 2. Create Virtual Environment
 ```bash
 python3 -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 ```
 
-### 3. Install dependencies
+### 3. Install Dependencies
 ```bash
 pip install -r requirements.txt
 ```
 
-### 4. Configure API credentials
+### 4. Configure Environment (Optional)
+For live trading, copy `.env.example` to `.env` and add your credentials:
 ```bash
 cp .env.example .env
-# Edit .env with your Public.com API credentials
 ```
 
-Get your API key from [Public.com Settings](https://public.com/settings/api).
-
-### 5. Run the dashboard
-```bash
-python app.py
+Edit `.env`:
 ```
-
-Open your browser to: **http://localhost:5006**
-
-## Configuration
-
-Create a `.env` file in the project root:
-
-```env
 PUBLIC_COM_SECRET=your_api_secret_here
 PUBLIC_COM_ACCOUNT_ID=your_account_id_here
 ```
 
-**Without API credentials**, the dashboard will still work with:
-- Paper trading (simulated)
-- Strategy backtesting (yfinance data)
-- SPY Scalper game
-- Option chains via yfinance
+**Note**: The app works without API credentials - paper trading, sentiment, and charts are fully functional using yfinance.
 
-**With API credentials**, you get:
-- Real portfolio data
-- Live order placement
-- Real-time positions and P/L
-- Full option chain data
+### 5. Run the Application
+```bash
+python app.py
+```
 
-## Architecture
+Or with host binding for LAN access:
+```bash
+python app.py --host 0.0.0.0 --port 5006
+```
+
+### 6. Open in Browser
+Navigate to: `http://127.0.0.1:5006`
+
+## Project Structure
 
 ```
 public-options-copilot/
-├── app.py              # Flask application (all-in-one)
-├── requirements.txt    # Python dependencies
-├── .env               # API credentials (git-ignored)
-├── .env.example       # Template for credentials
-├── data/              # Persistent data (git-ignored)
-│   ├── paper_portfolio.json
-│   ├── paper_trades.json
-│   ├── strategies.json
-│   └── scalper_scores.json
-└── README.md
+├── app.py                    # Flask entry point
+├── config.py                 # Configuration and feature flags
+├── requirements.txt          # Dependencies
+├── README.md                 # This file
+├── .env.example              # Environment template
+├── .gitignore
+├── services/
+│   ├── __init__.py
+│   ├── portfolio.py          # Public SDK portfolio management
+│   ├── trading.py            # Order placement
+│   ├── scanner.py            # Options scanner with edge scoring
+│   ├── paper_trading.py      # Virtual portfolio engine
+│   ├── market_data.py        # yfinance data provider
+│   ├── sentiment.py          # Sector sentiment analysis
+│   ├── analysis.py           # Technical analysis (RSI, MACD, etc.)
+│   └── indicators.py         # Chart indicator computation
+├── static/
+│   ├── css/
+│   │   └── style.css         # Dark theme styling
+│   └── js/
+│       └── app.js            # Frontend logic
+├── templates/
+│   └── index.html            # Single page app
+└── data/
+    └── paper_state.json      # Paper trading state (auto-created)
 ```
 
-## Tech Stack
+## Technical Details
 
-- **Backend**: Flask (Python)
-- **Frontend**: Vanilla JS + Plotly.js
-- **Market Data**: yfinance
-- **Trading API**: Public.com SDK (publicdotcom-py)
-- **Charts**: Plotly.js
+### Scanner Algorithm
+The options scanner uses edge-based scoring:
+- **Directional Alignment**: Only CALLS on uptrend, PUTS on downtrend
+- **IV Rank**: Prefer low IV (buy cheap options)
+- **Trend Strength**: Weight signals by trend confidence
+- **Delta Targeting**: Optimal delta range (0.30-0.50)
+- **Liquidity Filters**: Minimum volume, OI, and spread requirements
+- **Regime Detection**: Skip choppy markets (low ADX)
+
+### Sentiment Analysis
+Free data sources (no paid APIs):
+- VIX level and interpretation
+- Sector ETF performance (XLK, XLF, XLV, etc.)
+- Put/call ratio estimation from SPY options
+- Advance/decline breadth
+
+### Technical Indicators
+- RSI (14-period)
+- MACD (12/26/9)
+- Bollinger Bands (20-period, 2 std)
+- SMA (20, 50)
+- EMA (9)
+- ATR (14-period)
+- ADX (14-period)
 
 ## API Endpoints
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/portfolio` | GET | Get live portfolio |
-| `/api/quote/<ticker>` | GET | Get stock quote |
-| `/api/chart/<ticker>` | GET | Get price history |
-| `/api/expirations/<ticker>` | GET | Get option expirations |
-| `/api/chain/<ticker>/<exp>` | GET | Get option chain |
-| `/api/order/stock` | POST | Place stock order |
-| `/api/order/option` | POST | Place option order |
-| `/api/backtest` | POST | Run backtest |
-| `/api/paper/portfolio` | GET | Get paper portfolio |
-| `/api/paper/trade` | POST | Execute paper trade |
-| `/api/paper/reset` | POST | Reset paper portfolio |
-| `/api/scalper/scores` | GET | Get scalper scores |
-| `/api/strategies` | GET | Get saved strategies |
+### Market Data
+- `GET /api/quote/<symbol>` - Get quote
+- `GET /api/chart/<symbol>` - Get chart data with indicators
+- `GET /api/options/<symbol>/expirations` - Get expiration dates
+- `GET /api/options/<symbol>/chain` - Get option chain
 
-## Usage Tips
+### Analysis
+- `GET /api/analysis/<symbol>` - Get technical analysis
+- `GET /api/sentiment` - Get market sentiment
 
-### Backtesting
-1. Select a strategy type (SMA Crossover, RSI, Breakout)
-2. Adjust parameters for your hypothesis
-3. Click "Run" to see results
-4. Review equity curve and trade history
-5. Save promising strategies
+### Scanner
+- `POST /api/scanner/scan` - Scan for options
+- `GET /api/scanner/watchlist` - Get watchlist
+- `POST /api/scanner/preset/<name>` - Use preset watchlist
 
 ### Paper Trading
-1. Enter a ticker and quantity
-2. Click BUY or SELL
-3. Monitor positions in the table
-4. Close positions when ready
-5. Track your win/loss ratio
+- `GET /api/paper/portfolio` - Get paper portfolio
+- `POST /api/paper/buy` - Paper buy
+- `POST /api/paper/sell` - Paper sell
+- `POST /api/paper/reset` - Reset portfolio
+
+### Real Trading (requires API key)
+- `GET /api/portfolio` - Get real portfolio
+- `POST /api/order/preflight` - Preview order
+- `POST /api/order/place` - Place order
+- `GET /api/orders/open` - Get open orders
 
 ### SPY Scalper
-1. Watch the real-time SPY price
-2. Click BUY to go long, SELL to go short
-3. Click the opposite button to close and realize P/L
-4. Try to beat your high score!
+- `GET /api/game/spy` - Get game state
+- `POST /api/game/spy/buy` - Buy SPY
+- `POST /api/game/spy/sell` - Sell SPY
+- `POST /api/game/spy/reset` - Reset game
+
+## Requirements
+- Python 3.9+
+- Flask 2.0+
+- yfinance 0.2+
+- publicdotcom-py (for live trading)
 
 ## License
+MIT
 
-MIT License — Built for the Public.com Options Competition 2026
-
-## Author
-
-Created by [stevenartzt](https://github.com/stevenartzt)
+## Acknowledgments
+Built for the Public.com Options Trading Competition, March 2026.
