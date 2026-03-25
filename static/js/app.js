@@ -1291,7 +1291,7 @@ async function showSectorDetail(idx) {
         
         document.getElementById('leader-grid').innerHTML = quotes.map(q => {
             const chg = q.change_percent || 0;
-            return `<div class="leader-card" onclick="analyzeTicker('${q.ticker}')" style="cursor:pointer;">
+            return `<div class="leader-card" onclick="goToTicker('${q.ticker}')" style="cursor:pointer;">
                 <div class="ticker">${q.ticker}</div>
                 <div style="font-size:12px;color:var(--text-secondary);">$${(q.price||0).toFixed(2)}</div>
                 <div class="leader-change ${chg >= 0 ? 'positive' : 'negative'}">${chg >= 0 ? '+' : ''}${chg.toFixed(2)}%</div>
@@ -1300,10 +1300,10 @@ async function showSectorDetail(idx) {
     }
 }
 
-function analyzeTicker(ticker) {
+function goToTicker(ticker) {
     document.getElementById('ticker-search').value = ticker;
     showSection('trading');
-    document.getElementById('search-btn')?.click();
+    analyzeTicker();
 }
 
 // Sector quick-pick tickers for Trading tab
@@ -1321,11 +1321,7 @@ function showSectorTickers(sector) {
     const tickers = TRADING_SECTORS[sector] || [];
     const container = document.getElementById('sector-ticker-pills');
     container.innerHTML = tickers.map(t => 
-        `<button class="btn btn-sm" onclick="quickAnalyze('${t}')" style="font-size:11px;padding:4px 10px;background:var(--bg-tertiary);border:1px solid var(--border-color);cursor:pointer;">${t}</button>`
+        `<button class="btn btn-sm" onclick="goToTicker('${t}')" style="font-size:11px;padding:4px 10px;background:var(--bg-tertiary);border:1px solid var(--border-color);cursor:pointer;">${t}</button>`
     ).join('');
 }
 
-function quickAnalyze(ticker) {
-    document.getElementById('ticker-search').value = ticker;
-    document.getElementById('search-btn').click();
-}
