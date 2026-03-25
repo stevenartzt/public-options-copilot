@@ -324,17 +324,29 @@ async function loadPaperPortfolioTab() {
 }
 
 // Position Analysis Modal
+function extractUnderlying(symbol) {
+    // Parse OSI option symbol: "AAPL260402P00252500" → "AAPL"
+    // Option symbols have 6 digits for date after the ticker
+    const match = symbol.match(/^([A-Z]+)\d{6}[CP]\d{8}$/);
+    if (match) return match[1];
+    // Also handle with dots/dashes
+    const match2 = symbol.match(/^([A-Z.]+)\d{6}/);
+    if (match2) return match2[1];
+    return symbol; // Already a plain ticker
+}
+
 async function showAnalysisModal(symbol) {
+    const underlying = extractUnderlying(symbol);
     const modal = document.getElementById('analysis-modal');
     const loading = document.getElementById('analysis-loading');
     const content = document.getElementById('analysis-content');
     
-    document.getElementById('analysis-modal-title').textContent = `${symbol} Analysis`;
+    document.getElementById('analysis-modal-title').textContent = `${underlying} Analysis` + (underlying !== symbol ? ` (${symbol})` : '');
     loading.style.display = 'block';
     content.style.display = 'none';
     modal.classList.add('active');
     
-    const result = await api(`/api/analysis/full/${symbol}`);
+    const result = await api(`/api/analysis/full/${underlying}`);
     
     if (result.success) {
         const analysis = result.analysis;
