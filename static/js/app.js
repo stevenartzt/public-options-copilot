@@ -128,20 +128,21 @@ async function loadDashboard() {
         
         // Sector grid
         const grid = document.getElementById('sector-grid');
-        grid.innerHTML = data.sectors.map(sector => `
+        grid.innerHTML = data.sectors.map(sector => {
+            const fmt = (v) => `${v >= 0 ? '+' : ''}${v.toFixed(1)}%`;
+            const cls = (v) => v >= 0 ? 'positive' : 'negative';
+            return `
             <div class="sector-card">
                 <div class="icon">${sector.icon}</div>
                 <div class="name">${sector.sector}</div>
-                <div class="change ${sector.change_pct >= 0 ? 'positive' : 'negative'}">
-                    Today: ${sector.change_pct >= 0 ? '+' : ''}${sector.change_pct.toFixed(2)}%
-                </div>
-                <div class="change-detail" style="font-size:0.75em;display:flex;gap:8px;margin-top:2px;">
-                    <span class="${sector.week_change_pct >= 0 ? 'positive' : 'negative'}">W: ${sector.week_change_pct >= 0 ? '+' : ''}${sector.week_change_pct.toFixed(1)}%</span>
-                    <span class="${sector.month_change_pct >= 0 ? 'positive' : 'negative'}">M: ${sector.month_change_pct >= 0 ? '+' : ''}${sector.month_change_pct.toFixed(1)}%</span>
+                <div class="change ${cls(sector.change_pct)}">${fmt(sector.change_pct)}</div>
+                <div class="change-detail">
+                    <span class="${cls(sector.week_change_pct)}">W ${fmt(sector.week_change_pct)}</span>
+                    <span class="${cls(sector.month_change_pct)}">M ${fmt(sector.month_change_pct)}</span>
                 </div>
                 <div class="sentiment ${sector.sentiment.toLowerCase()}">${sector.sentiment}</div>
-            </div>
-        `).join('');
+            </div>`;
+        }).join('');
     }
     
     // Load SPY

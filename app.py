@@ -406,6 +406,16 @@ def get_spy_game():
     """Get SPY scalper game state."""
     spy_price = market_data.get_spy_price()
     
+    # Track price history for mini chart
+    if spy_price:
+        spy_game['price_history'].append({
+            'time': datetime.now().isoformat(),
+            'price': spy_price
+        })
+        # Keep last 50 prices
+        if len(spy_game['price_history']) > 50:
+            spy_game['price_history'] = spy_game['price_history'][-50:]
+    
     # Calculate current P/L if in position
     current_pnl = 0
     if spy_game['position'] and spy_price:
@@ -423,7 +433,8 @@ def get_spy_game():
         'current_pnl': round(current_pnl, 2),
         'session_pnl': round(spy_game['pnl'], 2),
         'trades': spy_game['trades'],
-        'high_score': round(spy_game['high_score'], 2)
+        'high_score': round(spy_game['high_score'], 2),
+        'price_history': spy_game['price_history']
     })
 
 
@@ -431,7 +442,32 @@ def get_spy_game():
 def spy_game_buy():
     """Buy SPY in the game."""
     if spy_game['position']:
-        return jsonify({'success': False, 'error': 'Already in position'})
+        # If short, close position first
+        if spy_game['position']['side'] == 'short':
+            spy_price = market_data.get_spy_price()
+            if spy_price:
+                entry = spy_game['position']['entry']
+                qty = spy_game['position']['quantity']
+                pnl = (entry - spy_price) * qty
+                spy_game['pnl'] += pnl
+                spy_game['trades'] += 1
+                if spy_game['pnl'] > spy_game['high_score']:
+                    spy_game['high_score'] = spy_game['pnl']
+                spy_game['position'] = None
+                # Now open long
+                spy_game['position'] = {
+                    'side': 'long',
+                    'entry': spy_price,
+                    'quantity': 100
+                }
+                return jsonify({
+                    'success': True,
+                    'message': f'Closed short (P/L: ${pnl:.2f}), Bought 100 SPY @ ${spy_price:.2f}',
+                    'position': spy_game['position'],
+                    'pnl': round(pnl, 2),
+                    'session_pnl': round(spy_game['pnl'], 2)
+                })
+        return jsonify({'success': False, 'error': 'Already in long position'})
     
     spy_price = market_data.get_spy_price()
     if not spy_price:
@@ -446,7 +482,8 @@ def spy_game_buy():
     return jsonify({
         'success': True,
         'message': f'Bought 100 SPY @ ${spy_price:.2f}',
-        'position': spy_game['position']
+        'position': spy_game['position'],
+        'session_pnl': round(spy_game['pnl'], 2)
     })
 
 
@@ -464,23 +501,37 @@ def spy_game_sell():
         
         if spy_game['position']['side'] == 'long':
             pnl = (spy_price - entry) * qty
+            spy_game['pnl'] += pnl
+            spy_game['trades'] += 1
+            
+            if spy_game['pnl'] > spy_game['high_score']:
+                spy_game['high_score'] = spy_game['pnl']
+            
+            spy_game['position'] = None
+            
+            return jsonify({
+                'success': True,
+                'message': f'Sold 100 SPY @ ${spy_price:.2f} (P/L: ${pnl:.2f})',
+                'pnl': round(pnl, 2),
+                'session_pnl': round(spy_game['pnl'], 2)
+            })
         else:
+            # Already short, close it
             pnl = (entry - spy_price) * qty
-        
-        spy_game['pnl'] += pnl
-        spy_game['trades'] += 1
-        
-        if spy_game['pnl'] > spy_game['high_score']:
-            spy_game['high_score'] = spy_game['pnl']
-        
-        spy_game['position'] = None
-        
-        return jsonify({
-            'success': True,
-            'message': f'Closed position @ ${spy_price:.2f} (P/L: ${pnl:.2f})',
-            'pnl': round(pnl, 2),
-            'session_pnl': round(spy_game['pnl'], 2)
-        })
+            spy_game['pnl'] += pnl
+            spy_game['trades'] += 1
+            
+            if spy_game['pnl'] > spy_game['high_score']:
+                spy_game['high_score'] = spy_game['pnl']
+            
+            spy_game['position'] = None
+            
+            return jsonify({
+                'success': True,
+                'message': f'Closed short @ ${spy_price:.2f} (P/L: ${pnl:.2f})',
+                'pnl': round(pnl, 2),
+                'session_pnl': round(spy_game['pnl'], 2)
+            })
     else:
         # Open short
         spy_game['position'] = {
@@ -492,7 +543,8 @@ def spy_game_sell():
         return jsonify({
             'success': True,
             'message': f'Shorted 100 SPY @ ${spy_price:.2f}',
-            'position': spy_game['position']
+            'position': spy_game['position'],
+            'session_pnl': round(spy_game['pnl'], 2)
         })
 
 
@@ -502,6 +554,7 @@ def spy_game_reset():
     spy_game['position'] = None
     spy_game['pnl'] = 0.0
     spy_game['trades'] = 0
+    spy_game['price_history'] = []
     
     return jsonify({
         'success': True,
@@ -537,6 +590,160 @@ def toggle_indicator():
         'indicator': indicator,
         'enabled': enabled
     })
+
+
+# ================== Position Analysis Routes ==================
+
+@app.route('/api/analysis/full/<symbol>')
+def get_full_analysis(symbol: str):
+    """Get full technical analysis with chart data for modal."""
+    symbol = symbol.upper()
+    
+    # Get analysis
+    analysis_result = analyzer.analyze(symbol)
+    if not analysis_result:
+        return jsonify({'success': False, 'error': f'Could not analyze {symbol}'}), 404
+    
+    analysis = analysis_result.to_dict()
+    
+    # Get chart data (30 days)
+    hist = market_data.get_history(symbol, "30d", "1d")
+    chart_data = None
+    if hist is not None and not hist.empty:
+        chart_data = {
+            'dates': hist.index.strftime('%Y-%m-%d').tolist(),
+            'close': hist['Close'].tolist(),
+            'high': hist['High'].tolist(),
+            'low': hist['Low'].tolist()
+        }
+    
+    # Generate recommendation
+    trend = analysis.get('trend', 'NEUTRAL')
+    rsi = analysis.get('rsi', 50)
+    regime = analysis.get('regime', 'UNKNOWN')
+    momentum_score = analysis.get('evidence', {}).get('momentum_score', 0)
+    structure_score = analysis.get('evidence', {}).get('structure_score', 0)
+    
+    combined_score = (momentum_score + structure_score) / 2
+    
+    if combined_score > 0.5 and trend == 'BULLISH':
+        recommendation = 'STRONG BUY'
+        rec_class = 'strong-buy'
+    elif combined_score > 0.2 and trend in ['BULLISH', 'NEUTRAL']:
+        recommendation = 'BUY'
+        rec_class = 'buy'
+    elif combined_score < -0.5 and trend == 'BEARISH':
+        recommendation = 'STRONG SELL'
+        rec_class = 'strong-sell'
+    elif combined_score < -0.2 and trend in ['BEARISH', 'NEUTRAL']:
+        recommendation = 'SELL'
+        rec_class = 'sell'
+    else:
+        recommendation = 'HOLD'
+        rec_class = 'hold'
+    
+    return jsonify({
+        'success': True,
+        'symbol': symbol,
+        'analysis': analysis,
+        'chart_data': chart_data,
+        'recommendation': recommendation,
+        'recommendation_class': rec_class
+    })
+
+
+# ================== Algo Trading Routes ==================
+
+@app.route('/api/algo/conditions')
+def get_algo_conditions():
+    """Get available condition types for strategy builder."""
+    conditions = algo_service.get_condition_types()
+    return jsonify({'success': True, 'conditions': conditions})
+
+
+@app.route('/api/algo/strategies')
+def get_algo_strategies():
+    """Get all saved strategies."""
+    strategies = algo_service.get_strategies()
+    return jsonify({'success': True, 'strategies': strategies})
+
+
+@app.route('/api/algo/strategy', methods=['POST'])
+def create_algo_strategy():
+    """Create a new algo trading strategy."""
+    data = request.json
+    if not data:
+        return jsonify({'success': False, 'error': 'No data provided'}), 400
+    
+    required = ['name', 'symbols', 'entry_conditions', 'exit_conditions']
+    for field in required:
+        if field not in data:
+            return jsonify({'success': False, 'error': f'{field} required'}), 400
+    
+    result = algo_service.create_strategy(
+        name=data['name'],
+        symbols=data['symbols'],
+        entry_conditions=data['entry_conditions'],
+        exit_conditions=data['exit_conditions'],
+        position_size_pct=data.get('position_size_pct', 10.0),
+        max_positions=data.get('max_positions', 5),
+        stop_loss_pct=data.get('stop_loss_pct'),
+        take_profit_pct=data.get('take_profit_pct')
+    )
+    
+    return jsonify(result)
+
+
+@app.route('/api/algo/strategy/<strategy_id>', methods=['GET'])
+def get_algo_strategy(strategy_id: str):
+    """Get a specific strategy."""
+    strategy = algo_service.get_strategy(strategy_id)
+    if strategy:
+        return jsonify({'success': True, 'strategy': strategy})
+    return jsonify({'success': False, 'error': 'Strategy not found'}), 404
+
+
+@app.route('/api/algo/strategy/<strategy_id>', methods=['DELETE'])
+def delete_algo_strategy(strategy_id: str):
+    """Delete a strategy."""
+    result = algo_service.delete_strategy(strategy_id)
+    if result.get('success'):
+        return jsonify(result)
+    return jsonify(result), 404
+
+
+@app.route('/api/algo/toggle/<strategy_id>', methods=['POST'])
+def toggle_algo_strategy(strategy_id: str):
+    """Toggle strategy enabled/live status."""
+    data = request.json or {}
+    
+    result = algo_service.toggle_strategy(
+        strategy_id=strategy_id,
+        enabled=data.get('enabled'),
+        is_live=data.get('is_live')
+    )
+    
+    if result.get('success'):
+        return jsonify(result)
+    return jsonify(result), 404
+
+
+@app.route('/api/algo/backtest', methods=['POST'])
+def run_algo_backtest():
+    """Run backtest with strategy config."""
+    data = request.json
+    if not data:
+        return jsonify({'success': False, 'error': 'No data provided'}), 400
+    
+    result = algo_service.backtest(
+        strategy_id=data.get('strategy_id'),
+        strategy_config=data.get('strategy_config'),
+        symbols=data.get('symbols'),
+        period=data.get('period', '1y'),
+        initial_capital=data.get('initial_capital', 10000.0)
+    )
+    
+    return jsonify(result)
 
 
 # ================== Run ==================

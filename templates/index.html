@@ -37,6 +37,10 @@
                     <span class="nav-icon">📝</span>
                     <span>Paper Trading</span>
                 </a>
+                <a href="#" class="nav-item" data-section="algo">
+                    <span class="nav-icon">🤖</span>
+                    <span>Algo Trading</span>
+                </a>
                 <a href="#" class="nav-item" data-section="spy-game">
                     <span class="nav-icon">⚡</span>
                     <span>SPY Scalper</span>
@@ -310,6 +314,171 @@ PUBLIC_COM_ACCOUNT_ID=your_account_id</pre>
                 <button id="paper-reset-btn" class="btn btn-danger" style="margin-top: 20px;">Reset Portfolio</button>
             </section>
             
+            <!-- Algo Trading Section -->
+            <section id="algo" class="section">
+                <h1>🤖 Algo Trading</h1>
+                
+                <div class="tabs">
+                    <button class="tab active" data-tab="strategy-builder">Strategy Builder</button>
+                    <button class="tab" data-tab="backtester">Backtester</button>
+                    <button class="tab" data-tab="strategies">My Strategies</button>
+                </div>
+                
+                <div class="tab-content active" id="strategy-builder">
+                    <div class="card">
+                        <h3>Create New Strategy</h3>
+                        <div class="form-group">
+                            <label>Strategy Name</label>
+                            <input type="text" id="strat-name" class="input" placeholder="My Strategy">
+                        </div>
+                        <div class="form-group">
+                            <label>Symbols (comma-separated)</label>
+                            <input type="text" id="strat-symbols" class="input" placeholder="SPY, AAPL, NVDA">
+                        </div>
+                        
+                        <h4>Entry Conditions (AND)</h4>
+                        <div id="entry-conditions" class="conditions-list">
+                            <div class="condition-row">
+                                <select class="select-input condition-type" data-group="entry">
+                                    <option value="">Select condition...</option>
+                                </select>
+                                <input type="number" class="num-input condition-value" placeholder="Value" style="display:none;">
+                                <button class="btn btn-danger btn-small remove-condition">✕</button>
+                            </div>
+                        </div>
+                        <button class="btn btn-secondary add-condition" data-group="entry">+ Add Entry Condition</button>
+                        
+                        <h4>Exit Conditions (OR)</h4>
+                        <div id="exit-conditions" class="conditions-list">
+                            <div class="condition-row">
+                                <select class="select-input condition-type" data-group="exit">
+                                    <option value="">Select condition...</option>
+                                </select>
+                                <input type="number" class="num-input condition-value" placeholder="Value" style="display:none;">
+                                <button class="btn btn-danger btn-small remove-condition">✕</button>
+                            </div>
+                        </div>
+                        <button class="btn btn-secondary add-condition" data-group="exit">+ Add Exit Condition</button>
+                        
+                        <h4>Position Sizing</h4>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Position Size (%)</label>
+                                <input type="number" id="strat-pos-size" class="input" value="10" min="1" max="100">
+                            </div>
+                            <div class="form-group">
+                                <label>Max Positions</label>
+                                <input type="number" id="strat-max-pos" class="input" value="5" min="1" max="20">
+                            </div>
+                            <div class="form-group">
+                                <label>Stop Loss (%)</label>
+                                <input type="number" id="strat-stop-loss" class="input" placeholder="e.g., 8" step="0.1">
+                            </div>
+                            <div class="form-group">
+                                <label>Take Profit (%)</label>
+                                <input type="number" id="strat-take-profit" class="input" placeholder="e.g., 15" step="0.1">
+                            </div>
+                        </div>
+                        
+                        <button id="create-strategy-btn" class="btn btn-primary" style="margin-top: 20px;">Create Strategy</button>
+                    </div>
+                </div>
+                
+                <div class="tab-content" id="backtester">
+                    <div class="card">
+                        <h3>Backtest Strategy</h3>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Select Strategy</label>
+                                <select id="backtest-strategy" class="select-input">
+                                    <option value="">Select a strategy...</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Period</label>
+                                <select id="backtest-period" class="select-input">
+                                    <option value="3mo">3 Months</option>
+                                    <option value="6mo">6 Months</option>
+                                    <option value="1y" selected>1 Year</option>
+                                    <option value="2y">2 Years</option>
+                                    <option value="5y">5 Years</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Initial Capital</label>
+                                <input type="number" id="backtest-capital" class="input" value="10000">
+                            </div>
+                        </div>
+                        <button id="run-backtest-btn" class="btn btn-primary">🚀 Run Backtest</button>
+                    </div>
+                    
+                    <div id="backtest-results" style="display: none;">
+                        <h3>Backtest Results</h3>
+                        <div class="cards-row">
+                            <div class="card stat-card">
+                                <div class="stat-label">Total Return</div>
+                                <div class="stat-value" id="bt-return">$0.00</div>
+                                <div class="stat-change" id="bt-return-pct">0.00%</div>
+                            </div>
+                            <div class="card stat-card">
+                                <div class="stat-label">Win Rate</div>
+                                <div class="stat-value" id="bt-winrate">0%</div>
+                            </div>
+                            <div class="card stat-card">
+                                <div class="stat-label">Profit Factor</div>
+                                <div class="stat-value" id="bt-profit-factor">0.00</div>
+                            </div>
+                            <div class="card stat-card">
+                                <div class="stat-label">Sharpe Ratio</div>
+                                <div class="stat-value" id="bt-sharpe">0.00</div>
+                            </div>
+                        </div>
+                        <div class="cards-row">
+                            <div class="card stat-card">
+                                <div class="stat-label">Total Trades</div>
+                                <div class="stat-value" id="bt-trades">0</div>
+                            </div>
+                            <div class="card stat-card">
+                                <div class="stat-label">Max Drawdown</div>
+                                <div class="stat-value" id="bt-drawdown">0%</div>
+                            </div>
+                            <div class="card stat-card">
+                                <div class="stat-label">Avg Trade P/L</div>
+                                <div class="stat-value" id="bt-avg-trade">$0.00</div>
+                            </div>
+                            <div class="card stat-card">
+                                <div class="stat-label">Avg Hold Days</div>
+                                <div class="stat-value" id="bt-hold-days">0</div>
+                            </div>
+                        </div>
+                        
+                        <div id="equity-chart" class="chart-container" style="height: 300px;"></div>
+                        
+                        <h4>Trade Log</h4>
+                        <table class="data-table" id="bt-trades-table">
+                            <thead>
+                                <tr>
+                                    <th>Symbol</th>
+                                    <th>Entry</th>
+                                    <th>Exit</th>
+                                    <th>P/L</th>
+                                    <th>P/L %</th>
+                                    <th>Days</th>
+                                    <th>Exit Reason</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <div class="tab-content" id="strategies">
+                    <div id="strategies-list">
+                        <p class="placeholder-text">No strategies yet. Create one in Strategy Builder.</p>
+                    </div>
+                </div>
+            </section>
+            
             <!-- SPY Scalper Game -->
             <section id="spy-game" class="section">
                 <h1>⚡ SPY Scalper Game</h1>
@@ -433,6 +602,65 @@ PUBLIC_COM_ACCOUNT_ID=your_account_id_here</pre>
             </form>
         </div>
     </div>
+    
+    <!-- Position Analysis Modal -->
+    <div class="modal" id="analysis-modal">
+        <div class="modal-content modal-large">
+            <span class="close-btn">&times;</span>
+            <h2 id="analysis-modal-title">Position Analysis</h2>
+            <div id="analysis-loading" class="loading">Loading analysis...</div>
+            <div id="analysis-content" style="display: none;">
+                <div class="cards-row">
+                    <div class="card stat-card">
+                        <div class="stat-label">Current Price</div>
+                        <div class="stat-value" id="modal-price">$--</div>
+                    </div>
+                    <div class="card stat-card">
+                        <div class="stat-label">Trend</div>
+                        <div class="stat-value">
+                            <span id="modal-trend" class="trend-badge">--</span>
+                        </div>
+                        <div class="stat-change" id="modal-trend-strength">-- strength</div>
+                    </div>
+                    <div class="card stat-card">
+                        <div class="stat-label">Recommendation</div>
+                        <div class="stat-value">
+                            <span id="modal-recommendation" class="trend-badge">--</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="modal-mini-chart" class="chart-container" style="height: 200px;"></div>
+                
+                <div class="cards-row">
+                    <div class="card">
+                        <h4>Technical Indicators</h4>
+                        <div class="indicator-row">RSI (14): <span id="modal-rsi">--</span></div>
+                        <div class="indicator-row">MACD Histogram: <span id="modal-macd">--</span></div>
+                        <div class="indicator-row">ATR %: <span id="modal-atr">--</span></div>
+                        <div class="indicator-row">ADX: <span id="modal-adx">--</span></div>
+                        <div class="indicator-row">BB Width: <span id="modal-bb">--</span>%</div>
+                    </div>
+                    <div class="card">
+                        <h4>Market Structure</h4>
+                        <div class="indicator-row">Regime: <span id="modal-regime" class="regime-badge">--</span></div>
+                        <div class="indicator-row">Support: <span id="modal-support">$--</span></div>
+                        <div class="indicator-row">Resistance: <span id="modal-resistance">$--</span></div>
+                        <div class="indicator-row">SMA 20: <span id="modal-sma20">$--</span></div>
+                        <div class="indicator-row">SMA 50: <span id="modal-sma50">$--</span></div>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <h4>Analysis Notes</h4>
+                    <ul id="modal-reasons"></ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Toast Container -->
+    <div id="toast-container"></div>
     
     <script src="/static/js/app.js"></script>
 </body>

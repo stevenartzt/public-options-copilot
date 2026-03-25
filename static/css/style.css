@@ -205,56 +205,85 @@ body {
 /* Sector Grid */
 .sector-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-    gap: 12px;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 10px;
 }
 
 .sector-card {
     background: var(--bg-card);
     border: 1px solid var(--border-color);
-    border-radius: 8px;
-    padding: 16px;
+    border-radius: 10px;
+    padding: 14px 12px;
     text-align: center;
+    transition: border-color 0.2s, transform 0.2s;
+}
+
+.sector-card:hover {
+    border-color: var(--primary);
+    transform: translateY(-2px);
 }
 
 .sector-card .icon {
-    font-size: 24px;
-    margin-bottom: 8px;
+    font-size: 22px;
+    margin-bottom: 6px;
 }
 
 .sector-card .name {
-    font-size: 14px;
-    font-weight: 500;
-    margin-bottom: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
 }
 
 .sector-card .change {
-    font-size: 18px;
+    font-size: 14px;
     font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.sector-card .change-detail {
+    justify-content: center;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+}
+
+.sector-card .change-detail span {
+    font-weight: 500;
 }
 
 .sector-card .sentiment {
-    font-size: 12px;
-    margin-top: 8px;
-    padding: 4px 8px;
-    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 700;
+    margin-top: 4px;
+    padding: 3px 10px;
+    border-radius: 12px;
     display: inline-block;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
 .sector-card .sentiment.bullish {
-    background: rgba(16, 185, 129, 0.2);
+    background: rgba(16, 185, 129, 0.15);
     color: var(--success);
+    border: 1px solid rgba(16, 185, 129, 0.3);
 }
 
 .sector-card .sentiment.bearish {
-    background: rgba(239, 68, 68, 0.2);
+    background: rgba(239, 68, 68, 0.15);
     color: var(--danger);
+    border: 1px solid rgba(239, 68, 68, 0.3);
 }
 
 .sector-card .sentiment.neutral {
-    background: rgba(160, 160, 176, 0.2);
+    background: rgba(160, 160, 176, 0.1);
     color: var(--text-secondary);
+    border: 1px solid rgba(160, 160, 176, 0.2);
 }
+
+.positive { color: var(--success); }
+.negative { color: var(--danger); }
 
 /* Tables */
 .data-table {
@@ -726,6 +755,279 @@ body {
     accent-color: var(--accent);
 }
 
+/* Position colors */
+.positive { color: var(--success); }
+.negative { color: var(--danger); }
+
+/* Modal variants */
+.modal-large {
+    max-width: 700px;
+}
+
+/* Toast notifications */
+#toast-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 2000;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.toast {
+    padding: 12px 20px;
+    border-radius: 8px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    font-size: 14px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    animation: slideIn 0.3s ease;
+    max-width: 350px;
+}
+
+.toast.success {
+    border-left: 4px solid var(--success);
+}
+
+.toast.error {
+    border-left: 4px solid var(--danger);
+}
+
+.toast.info {
+    border-left: 4px solid var(--accent);
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideOut {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+}
+
+/* Algo Trading */
+.conditions-list {
+    margin: 12px 0;
+}
+
+.condition-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.condition-row .select-input {
+    flex: 1;
+    max-width: 300px;
+}
+
+.condition-row .num-input {
+    width: 100px;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 16px;
+}
+
+.add-condition {
+    margin-top: 8px;
+}
+
+/* Strategy cards */
+.strategy-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 16px;
+}
+
+.strategy-card .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.strategy-card .name {
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.strategy-card .status {
+    display: flex;
+    gap: 12px;
+}
+
+.strategy-card .toggle-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.strategy-card .details {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px;
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.strategy-card .actions {
+    margin-top: 16px;
+    display: flex;
+    gap: 8px;
+}
+
+/* Toggle switch */
+.toggle-switch {
+    position: relative;
+    width: 44px;
+    height: 22px;
+}
+
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: 22px;
+    transition: 0.3s;
+}
+
+.toggle-slider:before {
+    position: absolute;
+    content: "";
+    height: 16px;
+    width: 16px;
+    left: 2px;
+    bottom: 2px;
+    background: var(--text-secondary);
+    border-radius: 50%;
+    transition: 0.3s;
+}
+
+.toggle-switch input:checked + .toggle-slider {
+    background: var(--accent);
+    border-color: var(--accent);
+}
+
+.toggle-switch input:checked + .toggle-slider:before {
+    transform: translateX(22px);
+    background: white;
+}
+
+/* Live warning */
+.live-warning {
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid var(--danger);
+    border-radius: 8px;
+    padding: 12px;
+    margin-top: 8px;
+    font-size: 13px;
+    color: var(--danger);
+}
+
+/* Regime badge */
+.regime-badge {
+    padding: 4px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.regime-badge.trending {
+    background: rgba(16, 185, 129, 0.2);
+    color: var(--success);
+}
+
+.regime-badge.choppy {
+    background: rgba(245, 158, 11, 0.2);
+    color: var(--warning);
+}
+
+.regime-badge.squeeze {
+    background: rgba(99, 102, 241, 0.2);
+    color: var(--accent);
+}
+
+/* Recommendation badges */
+.trend-badge.strong-buy {
+    background: rgba(16, 185, 129, 0.3);
+    color: #22c55e;
+}
+
+.trend-badge.buy {
+    background: rgba(16, 185, 129, 0.2);
+    color: var(--success);
+}
+
+.trend-badge.hold {
+    background: rgba(160, 160, 176, 0.2);
+    color: var(--text-secondary);
+}
+
+.trend-badge.sell {
+    background: rgba(239, 68, 68, 0.2);
+    color: var(--danger);
+}
+
+.trend-badge.strong-sell {
+    background: rgba(239, 68, 68, 0.3);
+    color: #dc2626;
+}
+
+/* Clickable rows */
+.data-table tr.clickable {
+    cursor: pointer;
+}
+
+.data-table tr.clickable:hover td {
+    background: var(--accent);
+    background: rgba(99, 102, 241, 0.1);
+}
+
+/* Position size indicator */
+.position-size {
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+/* Small button */
+.btn-small {
+    padding: 6px 12px;
+    font-size: 12px;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
     .sidebar {
@@ -747,5 +1049,11 @@ body {
     
     .cards-row {
         grid-template-columns: 1fr;
+    }
+    
+    .modal-content {
+        margin: 10px;
+        max-height: 90vh;
+        overflow-y: auto;
     }
 }
