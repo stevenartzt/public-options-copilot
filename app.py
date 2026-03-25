@@ -735,9 +735,25 @@ def run_algo_backtest():
     if not data:
         return jsonify({'success': False, 'error': 'No data provided'}), 400
     
+    # Support both saved strategy (by ID) and inline strategy config
+    strategy_config = data.get('strategy_config')
+    if not strategy_config and not data.get('strategy_id'):
+        # Try to build config from inline fields
+        if data.get('entry_conditions') or data.get('symbol'):
+            strategy_config = {
+                'name': data.get('name', 'Quick Backtest'),
+                'symbols': data.get('symbols', [data.get('symbol', 'SPY')]),
+                'entry_conditions': data.get('entry_conditions', []),
+                'exit_conditions': data.get('exit_conditions', []),
+                'position_size_pct': data.get('position_size', 10),
+                'max_positions': data.get('max_positions', 5),
+                'stop_loss_pct': data.get('stop_loss'),
+                'take_profit_pct': data.get('take_profit'),
+            }
+    
     result = algo_service.backtest(
         strategy_id=data.get('strategy_id'),
-        strategy_config=data.get('strategy_config'),
+        strategy_config=strategy_config,
         symbols=data.get('symbols'),
         period=data.get('period', '1y'),
         initial_capital=data.get('initial_capital', 10000.0)

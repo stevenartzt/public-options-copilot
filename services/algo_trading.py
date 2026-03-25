@@ -440,14 +440,15 @@ class AlgoTradingService:
         trades: List[BacktestTrade] = []
         equity_curve = []
         
-        # Get common date range
-        all_dates = set()
-        for hist in all_data.values():
-            all_dates.update(hist.index.strftime('%Y-%m-%d').tolist())
-        dates = sorted(list(all_dates))
+        # Get common date range — use integer indexing to avoid timezone issues
+        max_len = max(len(h) for h in all_data.values())
         
-        for date_str in dates:
-            date = datetime.strptime(date_str, '%Y-%m-%d')
+        # Use the longest history as the date spine
+        primary_hist = max(all_data.values(), key=len)
+        
+        for day_idx in range(20, len(primary_hist)):
+            date_str = primary_hist.index[day_idx].strftime('%Y-%m-%d')
+            date = primary_hist.index[day_idx].to_pydatetime().replace(tzinfo=None)
             
             # Calculate current equity
             total_equity = cash
@@ -455,8 +456,9 @@ class AlgoTradingService:
                 if sym in all_data:
                     hist = all_data[sym]
                     try:
-                        idx = hist.index.get_indexer([date], method='pad')[0]
-                        if idx >= 0:
+                        matching = hist.index.strftime('%Y-%m-%d') == date_str
+                        if matching.any():
+                            idx = matching.values.nonzero()[0][-1]
                             current_price = float(hist.iloc[idx]['Close'])
                             total_equity += current_price * pos['shares']
                     except:
@@ -474,12 +476,16 @@ class AlgoTradingService:
                 
                 hist = all_data[symbol]
                 
-                # Get data up to this date
+                # Get data up to this date — use matching date string
                 try:
-                    idx = hist.index.get_indexer([date], method='pad')[0]
-                    if idx < 20:  # Need minimum data for indicators
+                    matching = hist.index.strftime('%Y-%m-%d') == date_str
+                    if not matching.any():
                         continue
-                except:
+                    idx = int(matching.nonzero()[0][-1])
+                    if idx < 20:
+                        continue
+                except Exception as e:
+                    print(f"  Index error for {symbol} on {date_str}: {e}")
                     continue
                 
                 # Calculate indicators for analysis
@@ -611,8 +617,8 @@ class AlgoTradingService:
         
         result = BacktestResult(
             strategy_name=strategy.name,
-            start_date=dates[0] if dates else "",
-            end_date=dates[-1] if dates else "",
+            start_date=primary_hist.index[20].strftime('%Y-%m-%d'),
+            end_date=primary_hist.index[-1].strftime('%Y-%m-%d'),
             initial_capital=initial_capital,
             final_equity=final_equity,
             total_return=total_return,
@@ -645,11 +651,17 @@ class AlgoTradingService:
         sma_20 = sum(close[-20:]) / 20 if len(close) >= 20 else price
         sma_50 = sum(close[-50:]) / 50 if len(close) >= 50 else price
         
-        # MACD
+        # MACD — compute full MACD line then signal from that
         ema_12 = self._calc_ema(close, 12)
         ema_26 = self._calc_ema(close, 26)
         macd = ema_12 - ema_26
-        macd_signal = self._calc_ema([macd], 9) if len(close) > 26 else macd
+        # Build MACD history for signal calculation
+        macd_history = []
+        for i in range(26, len(close)):
+            e12 = self._calc_ema(close[:i+1], 12)
+            e26 = self._calc_ema(close[:i+1], 26)
+            macd_history.append(e12 - e26)
+        macd_signal = self._calc_ema(macd_history, 9) if len(macd_history) >= 9 else macd
         macd_histogram = macd - macd_signal
         
         # ATR
@@ -709,9 +721,10 @@ class AlgoTradingService:
         rs = avg_gain / avg_loss
         return 100 - (100 / (1 + rs))
     
-    def _calc_ema(self, prices: list, period: int) -> float:
+    def _calc_ema(self, prices, period: int) -> float:
+        prices = list(prices) if not isinstance(prices, list) else prices
         if len(prices) < period:
-            return float(prices[-1]) if prices else 0
+            return float(prices[-1]) if len(prices) > 0 else 0
         
         multiplier = 2 / (period + 1)
         ema = sum(prices[:period]) / period
