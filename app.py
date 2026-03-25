@@ -118,13 +118,32 @@ def get_chart_data(symbol: str):
 
 @app.route('/api/options/<symbol>/expirations')
 def get_option_expirations(symbol: str):
-    """Get option expiration dates."""
-    expirations = market_data.get_option_expirations(symbol.upper())
+    """Get option expiration dates with days to expiry."""
+    expirations = market_data.get_option_expirations(symbol.upper(), include_dte=True)
     return jsonify({
         'success': True,
         'symbol': symbol.upper(),
         'expirations': expirations
     })
+
+
+@app.route('/api/options/<symbol>/chain-near')
+def get_option_chain_near(symbol: str):
+    """Get option chain for the expiration nearest to requested DTE."""
+    target_dte = request.args.get('dte', 30, type=int)
+    
+    nearest = market_data.get_nearest_expiration(symbol.upper(), target_dte)
+    if not nearest:
+        return jsonify({'success': False, 'error': 'No expirations available'}), 404
+    
+    # Get the chain for that expiration
+    chain = market_data.get_option_chain(symbol.upper(), nearest['date'])
+    if chain:
+        chain['requested_dte'] = target_dte
+        chain['actual_dte'] = nearest['days_to_expiry']
+        return jsonify({'success': True, **chain})
+    
+    return jsonify({'success': False, 'error': 'Could not get option chain'}), 404
 
 
 @app.route('/api/options/<symbol>/chain')
@@ -757,6 +776,30 @@ def run_algo_backtest():
         symbols=data.get('symbols'),
         period=data.get('period', '1y'),
         initial_capital=data.get('initial_capital', 10000.0)
+    )
+    
+    return jsonify(result)
+
+
+@app.route('/api/algo/compare', methods=['POST'])
+def compare_algo_strategies():
+    """Compare multiple strategies via backtest."""
+    data = request.json
+    if not data:
+        return jsonify({'success': False, 'error': 'No data provided'}), 400
+    
+    strategy_ids = data.get('strategy_ids', [])
+    if not strategy_ids or len(strategy_ids) < 2:
+        return jsonify({'success': False, 'error': 'At least 2 strategy IDs required'}), 400
+    
+    if len(strategy_ids) > 5:
+        return jsonify({'success': False, 'error': 'Maximum 5 strategies for comparison'}), 400
+    
+    result = algo_service.compare_strategies(
+        strategy_ids=strategy_ids,
+        period=data.get('period', '1y'),
+        initial_capital=data.get('initial_capital', 10000.0),
+        symbols=data.get('symbols')
     )
     
     return jsonify(result)

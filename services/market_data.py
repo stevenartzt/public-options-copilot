@@ -173,17 +173,49 @@ class MarketDataService:
             print(f"Error getting option chain for {symbol}: {e}")
             return None
     
-    def get_option_expirations(self, symbol: str) -> List[str]:
+    def get_option_expirations(self, symbol: str, include_dte: bool = False) -> List:
         """Get available option expiration dates."""
         if not HAS_YFINANCE:
             return []
         
         try:
             ticker = yf.Ticker(symbol)
-            return list(ticker.options) if ticker.options else []
+            expirations = list(ticker.options) if ticker.options else []
+            
+            if not include_dte:
+                return expirations
+            
+            # Return with days_to_expiry
+            today = datetime.now().date()
+            result = []
+            for exp in expirations:
+                exp_date = datetime.strptime(exp, '%Y-%m-%d').date()
+                dte = (exp_date - today).days
+                result.append({
+                    'date': exp,
+                    'days_to_expiry': dte
+                })
+            return result
         except Exception as e:
             print(f"Error getting expirations for {symbol}: {e}")
             return []
+    
+    def get_nearest_expiration(self, symbol: str, target_dte: int) -> Optional[Dict]:
+        """Find the closest expiration to a target DTE."""
+        if not HAS_YFINANCE:
+            return None
+        
+        try:
+            expirations = self.get_option_expirations(symbol, include_dte=True)
+            if not expirations:
+                return None
+            
+            # Find closest expiration to target_dte
+            closest = min(expirations, key=lambda x: abs(x['days_to_expiry'] - target_dte))
+            return closest
+        except Exception as e:
+            print(f"Error getting nearest expiration for {symbol}: {e}")
+            return None
     
     def get_spy_price(self) -> Optional[float]:
         """Get current SPY price (for scalper game)."""

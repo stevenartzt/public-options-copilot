@@ -1152,3 +1152,196 @@ body {
     color: var(--primary);
     transform: translateY(-1px);
 }
+
+/* ================== Strategy Comparison ================== */
+.checkbox-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.checkbox-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.checkbox-item:hover {
+    border-color: var(--accent);
+}
+
+.checkbox-item input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--accent);
+}
+
+.checkbox-item span {
+    color: var(--text-primary);
+    font-size: 14px;
+}
+
+.winner-cell {
+    background: rgba(16, 185, 129, 0.2) !important;
+    font-weight: 600;
+    color: var(--success) !important;
+}
+
+/* ================== DTE Quickpicks ================== */
+.dte-quickpicks {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.dte-label {
+    color: var(--text-secondary);
+    font-size: 13px;
+    margin-right: 4px;
+}
+
+.dte-btn {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.dte-btn:hover {
+    border-color: var(--accent);
+    color: var(--text-primary);
+}
+
+.dte-btn.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: white;
+}
+
+/* ================== Option Chain Improvements ================== */
+.underlying-price-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    background: rgba(99, 102, 241, 0.1);
+    border: 1px solid var(--accent);
+    border-radius: 8px;
+    margin: 12px 0;
+}
+
+.price-label {
+    color: var(--text-secondary);
+    font-size: 13px;
+}
+
+.price-value {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--accent);
+}
+
+.chain-table-wrapper {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.option-chain-table {
+    font-size: 13px;
+}
+
+.option-chain-table th {
+    position: sticky;
+    top: 0;
+    background: var(--bg-secondary);
+    z-index: 10;
+}
+
+.option-chain-table td {
+    padding: 8px 10px;
+}
+
+/* ITM/ATM/OTM row highlighting */
+.itm-row td {
+    background: rgba(16, 185, 129, 0.08);
+}
+
+.itm-row:hover td {
+    background: rgba(16, 185, 129, 0.15) !important;
+}
+
+.atm-row td {
+    background: rgba(245, 158, 11, 0.15) !important;
+    font-weight: 600;
+}
+
+.atm-row:hover td {
+    background: rgba(245, 158, 11, 0.25) !important;
+}
+
+.otm-row td {
+    background: transparent;
+}
+
+.strike-col {
+    font-weight: 600;
+    font-family: 'JetBrains Mono', monospace;
+}
+
+.atm-row .strike-col {
+    color: var(--warning);
+}
+
+.itm-row .strike-col {
+    color: var(--success);
+}
+
+/* Chain table hover for clickable rows */
+.option-chain-table tr.clickable {
+    cursor: pointer;
+}
+
+.option-chain-table tr.clickable:hover td {
+    background: rgba(99, 102, 241, 0.15) !important;
+}
+
+/* Smooth scrolling for chain wrapper */
+.chain-table-wrapper {
+    scroll-behavior: smooth;
+}
+
+/* Option chain container improvements */
+#option-chain-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+}
+
+.chain-side h4 {
+    margin-bottom: 12px;
+    color: var(--text-primary);
+}
+
+/* Mobile responsive for option chain */
+@media (max-width: 900px) {
+    #option-chain-container {
+        grid-template-columns: 1fr;
+    }
+    
+    .dte-quickpicks {
+        justify-content: flex-start;
+    }
+}

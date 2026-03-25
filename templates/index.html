@@ -199,42 +199,66 @@ PUBLIC_COM_ACCOUNT_ID=your_account_id</pre>
                     
                     <h3>Option Chain</h3>
                     <div class="option-chain-controls">
-                        <select id="expiration-select" class="select-input">
-                            <option value="">Select Expiration</option>
-                        </select>
+                        <div class="dte-quickpicks">
+                            <span class="dte-label">Quick DTE:</span>
+                            <button class="btn btn-small dte-btn" data-dte="3">3D</button>
+                            <button class="btn btn-small dte-btn" data-dte="7">1W</button>
+                            <button class="btn btn-small dte-btn" data-dte="14">2W</button>
+                            <button class="btn btn-small dte-btn" data-dte="30">1M</button>
+                            <button class="btn btn-small dte-btn" data-dte="60">2M</button>
+                            <button class="btn btn-small dte-btn" data-dte="90">3M</button>
+                            <button class="btn btn-small dte-btn" data-dte="180">6M</button>
+                            <button class="btn btn-small dte-btn" data-dte="365">1Y</button>
+                        </div>
+                        <div style="margin-top: 8px; display: flex; align-items: center; gap: 12px;">
+                            <select id="expiration-select" class="select-input" style="min-width: 200px;">
+                                <option value="">Select Expiration</option>
+                            </select>
+                            <span id="chain-dte-info" style="color: var(--text-secondary); font-size: 13px;"></span>
+                        </div>
+                    </div>
+                    <div id="chain-underlying-price" class="underlying-price-bar" style="display: none;">
+                        <span class="price-label">Current Price:</span>
+                        <span class="price-value" id="chain-current-price">$--</span>
                     </div>
                     <div id="option-chain-container">
                         <div class="chain-side">
                             <h4>Calls</h4>
-                            <table class="data-table" id="calls-table">
-                                <thead>
-                                    <tr>
-                                        <th>Strike</th>
-                                        <th>Bid</th>
-                                        <th>Ask</th>
-                                        <th>Volume</th>
-                                        <th>OI</th>
-                                        <th>Action</th>
-                                    </tr>
-                                </thead>
-                                <tbody></tbody>
-                            </table>
+                            <div class="chain-table-wrapper">
+                                <table class="data-table option-chain-table" id="calls-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Strike</th>
+                                            <th>Bid</th>
+                                            <th>Ask</th>
+                                            <th>Last</th>
+                                            <th>Vol</th>
+                                            <th>OI</th>
+                                            <th>IV</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody></tbody>
+                                </table>
+                            </div>
                         </div>
                         <div class="chain-side">
                             <h4>Puts</h4>
-                            <table class="data-table" id="puts-table">
-                                <thead>
-                                    <tr>
-                                        <th>Strike</th>
-                                        <th>Bid</th>
-                                        <th>Ask</th>
-                                        <th>Volume</th>
-                                        <th>OI</th>
-                                        <th>Action</th>
-                                    </tr>
-                                </thead>
-                                <tbody></tbody>
-                            </table>
+                            <div class="chain-table-wrapper">
+                                <table class="data-table option-chain-table" id="puts-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Strike</th>
+                                            <th>Bid</th>
+                                            <th>Ask</th>
+                                            <th>Last</th>
+                                            <th>Vol</th>
+                                            <th>OI</th>
+                                            <th>IV</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody></tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -343,6 +367,7 @@ PUBLIC_COM_ACCOUNT_ID=your_account_id</pre>
                 <div class="tabs">
                     <button class="tab active" data-tab="strategy-builder">Strategy Builder</button>
                     <button class="tab" data-tab="backtester">Backtester</button>
+                    <button class="tab" data-tab="compare-strategies">Compare Strategies</button>
                     <button class="tab" data-tab="strategies">My Strategies</button>
                 </div>
                 
@@ -487,6 +512,57 @@ PUBLIC_COM_ACCOUNT_ID=your_account_id</pre>
                                     <th>P/L %</th>
                                     <th>Days</th>
                                     <th>Exit Reason</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <div class="tab-content" id="compare-strategies">
+                    <div class="card">
+                        <h3>Compare Multiple Strategies</h3>
+                        <p style="color: var(--text-secondary); margin-bottom: 16px;">
+                            Select 2-5 strategies to compare their backtest performance side-by-side.
+                        </p>
+                        <div class="form-group">
+                            <label>Select Strategies to Compare</label>
+                            <div id="compare-strategy-checkboxes" class="checkbox-grid">
+                                <p class="placeholder-text">No strategies available. Create some first!</p>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Period</label>
+                                <select id="compare-period" class="select-input">
+                                    <option value="6mo">6 Months</option>
+                                    <option value="1y" selected>1 Year</option>
+                                    <option value="2y">2 Years</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Initial Capital</label>
+                                <input type="number" id="compare-capital" class="input" value="10000">
+                            </div>
+                        </div>
+                        <button id="run-compare-btn" class="btn btn-primary">🔄 Run Comparison</button>
+                    </div>
+                    
+                    <div id="compare-results" style="display: none;">
+                        <h3>Comparison Results</h3>
+                        <div id="compare-equity-chart" class="chart-container" style="height: 350px;"></div>
+                        
+                        <h4>Performance Comparison</h4>
+                        <table class="data-table" id="compare-table">
+                            <thead>
+                                <tr>
+                                    <th>Strategy</th>
+                                    <th>Trades</th>
+                                    <th>Win Rate</th>
+                                    <th>Profit Factor</th>
+                                    <th>Sharpe</th>
+                                    <th>Return</th>
+                                    <th>Max DD</th>
                                 </tr>
                             </thead>
                             <tbody></tbody>

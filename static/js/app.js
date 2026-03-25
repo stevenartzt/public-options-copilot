@@ -106,6 +106,8 @@ document.querySelectorAll('.tab').forEach(tab => {
             loadStrategiesList();
         } else if (tabId === 'backtester') {
             loadBacktestStrategies();
+        } else if (tabId === 'compare-strategies') {
+            loadCompareStrategiesCheckboxes();
         }
     });
 });
@@ -646,6 +648,10 @@ async function loadChart(symbol) {
     Plotly.newPlot('price-chart', traces, layout);
 }
 
+// Store expirations with DTE
+let currentExpirations = [];
+let currentUnderlyingPrice = null;
+
 async function loadExpirations(symbol) {
     const result = await api(`/api/options/${symbol}/expirations`);
     
@@ -653,45 +659,145 @@ async function loadExpirations(symbol) {
     select.innerHTML = '<option value="">Select Expiration</option>';
     
     if (result.success && result.expirations) {
+        currentExpirations = result.expirations;
         result.expirations.forEach(exp => {
-            select.innerHTML += `<option value="${exp}">${exp}</option>`;
+            const dte = exp.days_to_expiry;
+            select.innerHTML += `<option value="${exp.date}" data-dte="${dte}">${exp.date} (${dte}d)</option>`;
         });
     }
 }
+
+// DTE Quickpick buttons
+document.querySelectorAll('.dte-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+        if (!currentTicker) {
+            showToast('Enter a ticker first', 'error');
+            return;
+        }
+        
+        const targetDte = parseInt(btn.dataset.dte);
+        
+        // Find closest expiration
+        if (currentExpirations.length === 0) {
+            await loadExpirations(currentTicker);
+        }
+        
+        if (currentExpirations.length === 0) {
+            showToast('No expirations available', 'error');
+            return;
+        }
+        
+        const closest = currentExpirations.reduce((prev, curr) => 
+            Math.abs(curr.days_to_expiry - targetDte) < Math.abs(prev.days_to_expiry - targetDte) ? curr : prev
+        );
+        
+        // Update select and load chain
+        document.getElementById('expiration-select').value = closest.date;
+        document.getElementById('chain-dte-info').textContent = `Closest to ${targetDte}d: ${closest.date} (${closest.days_to_expiry}d)`;
+        
+        // Highlight active button
+        document.querySelectorAll('.dte-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        
+        loadOptionChain(currentTicker, closest.date);
+    });
+});
 
 document.getElementById('expiration-select').addEventListener('change', async (e) => {
     const exp = e.target.value;
     if (!exp || !currentTicker) return;
     
-    const chain = await api(`/api/options/${currentTicker}/chain?expiration=${exp}`);
-    if (!chain.success) return;
+    // Clear DTE button highlights
+    document.querySelectorAll('.dte-btn').forEach(b => b.classList.remove('active'));
     
-    // Calls table
-    const callsTbody = document.querySelector('#calls-table tbody');
-    callsTbody.innerHTML = chain.calls.map(opt => `
-        <tr>
-            <td>$${opt.strike.toFixed(2)}</td>
-            <td>${opt.bid?.toFixed(2) || '--'}</td>
-            <td>${opt.ask?.toFixed(2) || '--'}</td>
-            <td>${opt.volume || 0}</td>
-            <td>${opt.open_interest || 0}</td>
-            <td><button class="btn btn-primary btn-small" onclick="openOrderModal('${opt.symbol || currentTicker + exp + 'C' + opt.strike}', 'BUY', ${(opt.bid + opt.ask) / 2 || opt.last})">Trade</button></td>
-        </tr>
-    `).join('');
+    const option = e.target.options[e.target.selectedIndex];
+    const dte = option.dataset.dte;
+    document.getElementById('chain-dte-info').textContent = `${dte} days to expiry`;
     
-    // Puts table
-    const putsTbody = document.querySelector('#puts-table tbody');
-    putsTbody.innerHTML = chain.puts.map(opt => `
-        <tr>
-            <td>$${opt.strike.toFixed(2)}</td>
-            <td>${opt.bid?.toFixed(2) || '--'}</td>
-            <td>${opt.ask?.toFixed(2) || '--'}</td>
-            <td>${opt.volume || 0}</td>
-            <td>${opt.open_interest || 0}</td>
-            <td><button class="btn btn-primary btn-small" onclick="openOrderModal('${opt.symbol || currentTicker + exp + 'P' + opt.strike}', 'BUY', ${(opt.bid + opt.ask) / 2 || opt.last})">Trade</button></td>
-        </tr>
-    `).join('');
+    loadOptionChain(currentTicker, exp);
 });
+
+async function loadOptionChain(symbol, expiration) {
+    const chain = await api(`/api/options/${symbol}/chain?expiration=${expiration}`);
+    if (!chain.success) {
+        showToast('Failed to load option chain', 'error');
+        return;
+    }
+    
+    currentUnderlyingPrice = chain.underlying_price || null;
+    
+    // Show underlying price bar
+    const priceBar = document.getElementById('chain-underlying-price');
+    if (currentUnderlyingPrice) {
+        document.getElementById('chain-current-price').textContent = `$${currentUnderlyingPrice.toFixed(2)}`;
+        priceBar.style.display = 'flex';
+    } else {
+        priceBar.style.display = 'none';
+    }
+    
+    // Sort strikes by distance from ATM (current price in center)
+    const sortedCalls = [...chain.calls].sort((a, b) => a.strike - b.strike);
+    const sortedPuts = [...chain.puts].sort((a, b) => a.strike - b.strike);
+    
+    // Find ATM strike (closest to current price)
+    const atmStrike = currentUnderlyingPrice 
+        ? sortedCalls.reduce((prev, curr) => 
+            Math.abs(curr.strike - currentUnderlyingPrice) < Math.abs(prev.strike - currentUnderlyingPrice) ? curr : prev
+          ).strike
+        : null;
+    
+    // Render calls table
+    const callsTbody = document.querySelector('#calls-table tbody');
+    callsTbody.innerHTML = sortedCalls.map(opt => {
+        const isItm = currentUnderlyingPrice && opt.strike < currentUnderlyingPrice;
+        const isAtm = opt.strike === atmStrike;
+        const rowClass = isAtm ? 'atm-row' : (isItm ? 'itm-row' : 'otm-row');
+        const mid = (opt.bid && opt.ask) ? ((opt.bid + opt.ask) / 2).toFixed(2) : (opt.last?.toFixed(2) || '--');
+        const iv = opt.implied_volatility ? (opt.implied_volatility * 100).toFixed(1) + '%' : '--';
+        
+        return `
+        <tr class="${rowClass} clickable" onclick="openOrderModal('${opt.symbol || symbol + expiration.replace(/-/g, '') + 'C' + Math.round(opt.strike * 1000).toString().padStart(8, '0')}', 'BUY', ${mid !== '--' ? mid : 0})" data-strike="${opt.strike}">
+            <td class="strike-col">${isAtm ? '→ ' : ''}$${opt.strike.toFixed(2)}</td>
+            <td>${opt.bid?.toFixed(2) || '--'}</td>
+            <td>${opt.ask?.toFixed(2) || '--'}</td>
+            <td>${opt.last?.toFixed(2) || '--'}</td>
+            <td>${opt.volume || 0}</td>
+            <td>${opt.open_interest || 0}</td>
+            <td>${iv}</td>
+        </tr>`;
+    }).join('');
+    
+    // Render puts table
+    const putsTbody = document.querySelector('#puts-table tbody');
+    putsTbody.innerHTML = sortedPuts.map(opt => {
+        const isItm = currentUnderlyingPrice && opt.strike > currentUnderlyingPrice;
+        const isAtm = opt.strike === atmStrike;
+        const rowClass = isAtm ? 'atm-row' : (isItm ? 'itm-row' : 'otm-row');
+        const mid = (opt.bid && opt.ask) ? ((opt.bid + opt.ask) / 2).toFixed(2) : (opt.last?.toFixed(2) || '--');
+        const iv = opt.implied_volatility ? (opt.implied_volatility * 100).toFixed(1) + '%' : '--';
+        
+        return `
+        <tr class="${rowClass} clickable" onclick="openOrderModal('${opt.symbol || symbol + expiration.replace(/-/g, '') + 'P' + Math.round(opt.strike * 1000).toString().padStart(8, '0')}', 'BUY', ${mid !== '--' ? mid : 0})" data-strike="${opt.strike}">
+            <td class="strike-col">${isAtm ? '→ ' : ''}$${opt.strike.toFixed(2)}</td>
+            <td>${opt.bid?.toFixed(2) || '--'}</td>
+            <td>${opt.ask?.toFixed(2) || '--'}</td>
+            <td>${opt.last?.toFixed(2) || '--'}</td>
+            <td>${opt.volume || 0}</td>
+            <td>${opt.open_interest || 0}</td>
+            <td>${iv}</td>
+        </tr>`;
+    }).join('');
+    
+    // Scroll to ATM strike
+    if (atmStrike) {
+        setTimeout(() => {
+            const atmRow = document.querySelector(`#calls-table .atm-row`);
+            if (atmRow) {
+                atmRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }, 100);
+    }
+}
 
 // Scanner
 document.getElementById('scan-btn').addEventListener('click', async () => {
@@ -1065,6 +1171,145 @@ document.getElementById('run-backtest-btn').addEventListener('click', async () =
     
     showToast('Backtest complete!', 'success');
 });
+
+
+// ================== Strategy Comparison ==================
+
+async function loadCompareStrategiesCheckboxes() {
+    const result = await api('/api/algo/strategies');
+    const container = document.getElementById('compare-strategy-checkboxes');
+    
+    if (!result.success || result.strategies.length === 0) {
+        container.innerHTML = '<p class="placeholder-text">No strategies available. Create some first!</p>';
+        return;
+    }
+    
+    container.innerHTML = result.strategies.map(strat => `
+        <label class="checkbox-item">
+            <input type="checkbox" value="${strat.id}" data-name="${strat.name}" class="compare-checkbox">
+            <span>${strat.name}</span>
+        </label>
+    `).join('');
+}
+
+document.getElementById('run-compare-btn').addEventListener('click', async () => {
+    const checkboxes = document.querySelectorAll('.compare-checkbox:checked');
+    const strategyIds = Array.from(checkboxes).map(cb => cb.value);
+    
+    if (strategyIds.length < 2) {
+        showToast('Select at least 2 strategies to compare', 'error');
+        return;
+    }
+    
+    if (strategyIds.length > 5) {
+        showToast('Maximum 5 strategies for comparison', 'error');
+        return;
+    }
+    
+    const period = document.getElementById('compare-period').value;
+    const capital = parseFloat(document.getElementById('compare-capital').value) || 10000;
+    
+    showToast('Running comparison...', 'info');
+    
+    const result = await api('/api/algo/compare', {
+        method: 'POST',
+        body: JSON.stringify({
+            strategy_ids: strategyIds,
+            period,
+            initial_capital: capital
+        })
+    });
+    
+    if (!result.success) {
+        showToast(result.error || 'Comparison failed', 'error');
+        return;
+    }
+    
+    displayComparisonResults(result.results);
+});
+
+function displayComparisonResults(results) {
+    document.getElementById('compare-results').style.display = 'block';
+    
+    // Strategy colors for charts
+    const colors = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
+    
+    // Build equity curve traces
+    const traces = [];
+    const tableRows = [];
+    
+    // Track best values for highlighting
+    let bestWinRate = -Infinity, bestPF = -Infinity, bestSharpe = -Infinity, bestReturn = -Infinity, bestDD = Infinity;
+    
+    results.forEach((r, i) => {
+        if (!r.success) return;
+        const bt = r.result;
+        
+        // Track best values
+        if (bt.win_rate > bestWinRate) bestWinRate = bt.win_rate;
+        if (bt.profit_factor > bestPF) bestPF = bt.profit_factor;
+        if (bt.sharpe_ratio > bestSharpe) bestSharpe = bt.sharpe_ratio;
+        if (bt.total_return_pct > bestReturn) bestReturn = bt.total_return_pct;
+        if (bt.max_drawdown_pct < bestDD) bestDD = bt.max_drawdown_pct;
+    });
+    
+    results.forEach((r, i) => {
+        if (!r.success) {
+            tableRows.push(`<tr><td colspan="7">${r.strategy_id}: ${r.error}</td></tr>`);
+            return;
+        }
+        
+        const bt = r.result;
+        const color = colors[i % colors.length];
+        
+        // Add equity curve trace
+        if (bt.equity_curve && bt.equity_curve.length > 0) {
+            traces.push({
+                x: bt.equity_curve.map(p => p.date),
+                y: bt.equity_curve.map(p => p.equity),
+                type: 'scatter',
+                mode: 'lines',
+                name: bt.strategy_name,
+                line: { color: color, width: 2 }
+            });
+        }
+        
+        // Build table row with highlighting for best values
+        const highlightClass = (val, best) => val === best ? 'winner-cell' : '';
+        
+        tableRows.push(`
+            <tr>
+                <td><span style="color: ${color}; font-weight: bold;">●</span> ${bt.strategy_name}</td>
+                <td>${bt.total_trades}</td>
+                <td class="${highlightClass(bt.win_rate, bestWinRate)}">${bt.win_rate.toFixed(1)}%</td>
+                <td class="${highlightClass(bt.profit_factor, bestPF)}">${bt.profit_factor.toFixed(2)}</td>
+                <td class="${highlightClass(bt.sharpe_ratio, bestSharpe)}">${bt.sharpe_ratio.toFixed(2)}</td>
+                <td class="${highlightClass(bt.total_return_pct, bestReturn)} ${bt.total_return_pct >= 0 ? 'positive' : 'negative'}">${bt.total_return_pct >= 0 ? '+' : ''}${bt.total_return_pct.toFixed(2)}%</td>
+                <td class="${highlightClass(bt.max_drawdown_pct, bestDD)}">${bt.max_drawdown_pct.toFixed(2)}%</td>
+            </tr>
+        `);
+    });
+    
+    // Render equity chart
+    if (traces.length > 0) {
+        Plotly.newPlot('compare-equity-chart', traces, {
+            title: 'Equity Curves Comparison',
+            margin: { t: 50, r: 20, b: 40, l: 60 },
+            paper_bgcolor: '#16161f',
+            plot_bgcolor: '#16161f',
+            font: { color: '#a0a0b0' },
+            xaxis: { showgrid: false },
+            yaxis: { showgrid: true, gridcolor: '#2a2a3a', title: 'Equity ($)' },
+            legend: { orientation: 'h', y: -0.15 }
+        }, { responsive: true });
+    }
+    
+    // Render comparison table
+    document.querySelector('#compare-table tbody').innerHTML = tableRows.join('');
+    
+    showToast('Comparison complete!', 'success');
+}
+
 
 // ================== SPY Scalper Game ==================
 

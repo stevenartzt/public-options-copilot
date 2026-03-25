@@ -786,6 +786,53 @@ class AlgoTradingService:
         
         return round(dx, 1)
     
+    def compare_strategies(self, strategy_ids: List[str], period: str = "1y",
+                          initial_capital: float = 10000.0, 
+                          symbols: List[str] = None) -> Dict[str, Any]:
+        """Run backtests on multiple strategies for comparison."""
+        if not strategy_ids:
+            return {'success': False, 'error': 'No strategy IDs provided'}
+        
+        results = []
+        for strategy_id in strategy_ids:
+            if strategy_id not in self.strategies:
+                results.append({
+                    'strategy_id': strategy_id,
+                    'success': False,
+                    'error': 'Strategy not found'
+                })
+                continue
+            
+            # Run backtest for this strategy
+            bt_result = self.backtest(
+                strategy_id=strategy_id,
+                symbols=symbols,
+                period=period,
+                initial_capital=initial_capital
+            )
+            
+            if bt_result.get('success'):
+                result_data = bt_result['result']
+                result_data['strategy_id'] = strategy_id
+                results.append({
+                    'strategy_id': strategy_id,
+                    'success': True,
+                    'result': result_data
+                })
+            else:
+                results.append({
+                    'strategy_id': strategy_id,
+                    'success': False,
+                    'error': bt_result.get('error', 'Backtest failed')
+                })
+        
+        return {
+            'success': True,
+            'results': results,
+            'period': period,
+            'initial_capital': initial_capital
+        }
+
     def get_condition_types(self) -> Dict[str, List[Dict]]:
         """Get available condition types for UI."""
         return {
