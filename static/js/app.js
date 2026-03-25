@@ -8,6 +8,7 @@ let currentSection = 'dashboard';
 let apiAvailable = false;
 let currentTicker = null;
 let spyGameInterval = null;
+let conditionTypes = { entry_conditions: [], exit_conditions: [] };
 
 // API Helper
 async function api(endpoint, options = {}) {
@@ -24,6 +25,20 @@ async function api(endpoint, options = {}) {
         console.error('API Error:', error);
         return { success: false, error: error.message };
     }
+}
+
+// Toast notifications
+function showToast(message, type = 'info') {
+    const container = document.getElementById('toast-container');
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.textContent = message;
+    container.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.style.animation = 'slideOut 0.3s ease forwards';
+        setTimeout(() => toast.remove(), 300);
+    }, 4000);
 }
 
 // Navigation
@@ -62,6 +77,9 @@ function showSection(section) {
         case 'paper':
             loadPaperPortfolio();
             break;
+        case 'algo':
+            loadAlgoSection();
+            break;
         case 'spy-game':
             startSpyGame();
             break;
@@ -82,6 +100,13 @@ document.querySelectorAll('.tab').forEach(tab => {
         
         tab.classList.add('active');
         parent.querySelector(`#${tabId}`).classList.add('active');
+        
+        // Load tab-specific data
+        if (tabId === 'strategies') {
+            loadStrategiesList();
+        } else if (tabId === 'backtester') {
+            loadBacktestStrategies();
+        }
     });
 });
 
@@ -102,7 +127,45 @@ async function init() {
         text.textContent = 'Paper Only';
     }
     
+    // Load condition types for algo trading
+    const conditions = await api('/api/algo/conditions');
+    if (conditions.success) {
+        conditionTypes = conditions.conditions;
+    }
+    
     loadDashboard();
+    setupModalListeners();
+}
+
+// Modal close on ESC and outside click
+function setupModalListeners() {
+    // ESC key
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            document.querySelectorAll('.modal.active').forEach(modal => {
+                modal.classList.remove('active');
+            });
+            if (spyGameInterval && currentSection !== 'spy-game') {
+                clearInterval(spyGameInterval);
+            }
+        }
+    });
+    
+    // Click outside modal
+    document.querySelectorAll('.modal').forEach(modal => {
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.classList.remove('active');
+            }
+        });
+    });
+    
+    // Close buttons
+    document.querySelectorAll('.close-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            btn.closest('.modal').classList.remove('active');
+        });
+    });
 }
 
 // Dashboard
@@ -128,21 +191,16 @@ async function loadDashboard() {
         
         // Sector grid
         const grid = document.getElementById('sector-grid');
-        grid.innerHTML = data.sectors.map(sector => {
-            const fmt = (v) => `${v >= 0 ? '+' : ''}${v.toFixed(1)}%`;
-            const cls = (v) => v >= 0 ? 'positive' : 'negative';
-            return `
+        grid.innerHTML = data.sectors.map(sector => `
             <div class="sector-card">
                 <div class="icon">${sector.icon}</div>
                 <div class="name">${sector.sector}</div>
-                <div class="change ${cls(sector.change_pct)}">${fmt(sector.change_pct)}</div>
-                <div class="change-detail">
-                    <span class="${cls(sector.week_change_pct)}">W ${fmt(sector.week_change_pct)}</span>
-                    <span class="${cls(sector.month_change_pct)}">M ${fmt(sector.month_change_pct)}</span>
+                <div class="change ${sector.change_pct >= 0 ? 'positive' : 'negative'}">
+                    ${sector.change_pct >= 0 ? '+' : ''}${sector.change_pct.toFixed(2)}%
                 </div>
                 <div class="sentiment ${sector.sentiment.toLowerCase()}">${sector.sentiment}</div>
-            </div>`;
-        }).join('');
+            </div>
+        `).join('');
     }
     
     // Load SPY
@@ -170,11 +228,19 @@ async function loadPortfolio() {
             document.getElementById('real-cash').textContent = `$${account.cash.toLocaleString()}`;
             document.getElementById('real-buying-power').textContent = `$${account.buying_power.toLocaleString()}`;
             
-            // Positions table
+            // Calculate total positions value
+            const totalValue = portfolio.positions.reduce((sum, pos) => sum + (pos.current_price * pos.quantity), 0);
+            
+            // Positions table with clickable rows
             const tbody = document.querySelector('#real-positions-table tbody');
-            tbody.innerHTML = portfolio.positions.map(pos => `
-                <tr>
-                    <td>${pos.symbol}</td>
+            tbody.innerHTML = portfolio.positions.map(pos => {
+                const positionPct = totalValue > 0 ? ((pos.current_price * pos.quantity) / account.equity * 100).toFixed(1) : 0;
+                return `
+                <tr class="clickable" onclick="showAnalysisModal('${pos.symbol}')">
+                    <td>
+                        ${pos.symbol}
+                        <div class="position-size">${positionPct}% of portfolio</div>
+                    </td>
                     <td>${pos.quantity}</td>
                     <td>$${pos.average_price.toFixed(2)}</td>
                     <td>$${pos.current_price.toFixed(2)}</td>
@@ -182,10 +248,10 @@ async function loadPortfolio() {
                         $${pos.unrealized_pl.toFixed(2)} (${pos.unrealized_pl_percent.toFixed(1)}%)
                     </td>
                     <td>
-                        <button class="btn btn-danger btn-small" onclick="openOrderModal('${pos.symbol}', 'SELL', ${pos.current_price})">Sell</button>
+                        <button class="btn btn-danger btn-small" onclick="event.stopPropagation(); openOrderModal('${pos.symbol}', 'SELL', ${pos.current_price})">Sell</button>
                     </td>
                 </tr>
-            `).join('');
+            `}).join('');
         }
     }
     
@@ -197,6 +263,8 @@ async function loadPaperPortfolioTab() {
     const portfolio = await api('/api/paper/portfolio');
     
     if (portfolio.success) {
+        const totalValue = portfolio.positions.reduce((sum, pos) => sum + pos.market_value, 0);
+        
         const tab = document.getElementById('paper-portfolio');
         tab.innerHTML = `
             <div class="cards-row">
@@ -227,9 +295,14 @@ async function loadPaperPortfolioTab() {
                     </tr>
                 </thead>
                 <tbody>
-                    ${portfolio.positions.map(pos => `
-                        <tr>
-                            <td>${pos.symbol}</td>
+                    ${portfolio.positions.map(pos => {
+                        const positionPct = portfolio.total_equity > 0 ? (pos.market_value / portfolio.total_equity * 100).toFixed(1) : 0;
+                        return `
+                        <tr class="clickable" onclick="showAnalysisModal('${pos.symbol}')">
+                            <td>
+                                ${pos.symbol}
+                                <div class="position-size">${positionPct}% of portfolio</div>
+                            </td>
                             <td>${pos.quantity}</td>
                             <td>$${pos.average_price.toFixed(2)}</td>
                             <td>$${pos.current_price.toFixed(2)}</td>
@@ -237,10 +310,83 @@ async function loadPaperPortfolioTab() {
                                 $${pos.unrealized_pl.toFixed(2)}
                             </td>
                         </tr>
-                    `).join('') || '<tr><td colspan="5" style="text-align:center;">No positions</td></tr>'}
+                    `}).join('') || '<tr><td colspan="5" style="text-align:center;">No positions</td></tr>'}
                 </tbody>
             </table>
         `;
+    }
+}
+
+// Position Analysis Modal
+async function showAnalysisModal(symbol) {
+    const modal = document.getElementById('analysis-modal');
+    const loading = document.getElementById('analysis-loading');
+    const content = document.getElementById('analysis-content');
+    
+    document.getElementById('analysis-modal-title').textContent = `${symbol} Analysis`;
+    loading.style.display = 'block';
+    content.style.display = 'none';
+    modal.classList.add('active');
+    
+    const result = await api(`/api/analysis/full/${symbol}`);
+    
+    if (result.success) {
+        const analysis = result.analysis;
+        
+        document.getElementById('modal-price').textContent = `$${analysis.price.toFixed(2)}`;
+        
+        const trendEl = document.getElementById('modal-trend');
+        trendEl.textContent = analysis.trend;
+        trendEl.className = `trend-badge ${analysis.trend.toLowerCase()}`;
+        document.getElementById('modal-trend-strength').textContent = `${analysis.trend_strength.toFixed(0)}% strength`;
+        
+        const recEl = document.getElementById('modal-recommendation');
+        recEl.textContent = result.recommendation;
+        recEl.className = `trend-badge ${result.recommendation_class}`;
+        
+        document.getElementById('modal-rsi').textContent = analysis.rsi.toFixed(1);
+        document.getElementById('modal-macd').textContent = analysis.macd_histogram.toFixed(4);
+        document.getElementById('modal-atr').textContent = analysis.atr_pct.toFixed(2) + '%';
+        document.getElementById('modal-adx').textContent = analysis.adx.toFixed(1);
+        document.getElementById('modal-bb').textContent = analysis.bollinger_width.toFixed(2);
+        
+        const regimeEl = document.getElementById('modal-regime');
+        regimeEl.textContent = analysis.regime;
+        regimeEl.className = `regime-badge ${analysis.regime.toLowerCase()}`;
+        
+        document.getElementById('modal-support').textContent = `$${analysis.support.toFixed(2)}`;
+        document.getElementById('modal-resistance').textContent = `$${analysis.resistance.toFixed(2)}`;
+        document.getElementById('modal-sma20').textContent = `$${analysis.sma_20.toFixed(2)}`;
+        document.getElementById('modal-sma50').textContent = `$${analysis.sma_50.toFixed(2)}`;
+        
+        const reasonsList = document.getElementById('modal-reasons');
+        reasonsList.innerHTML = analysis.reasons.map(r => `<li>${r}</li>`).join('');
+        
+        // Mini chart
+        if (result.chart_data) {
+            const chartData = result.chart_data;
+            Plotly.newPlot('modal-mini-chart', [{
+                x: chartData.dates,
+                y: chartData.close,
+                type: 'scatter',
+                mode: 'lines',
+                fill: 'tozeroy',
+                line: { color: '#6366f1', width: 2 },
+                fillcolor: 'rgba(99, 102, 241, 0.1)'
+            }], {
+                margin: { t: 10, r: 20, b: 30, l: 50 },
+                paper_bgcolor: '#16161f',
+                plot_bgcolor: '#16161f',
+                font: { color: '#a0a0b0' },
+                xaxis: { showgrid: false },
+                yaxis: { showgrid: true, gridcolor: '#2a2a3a' }
+            }, { responsive: true, displayModeBar: false });
+        }
+        
+        loading.style.display = 'none';
+        content.style.display = 'block';
+    } else {
+        loading.textContent = result.error || 'Failed to load analysis';
     }
 }
 
@@ -255,11 +401,16 @@ async function loadPaperPortfolio() {
             `$${portfolio.total_return.toFixed(2)} (${portfolio.total_return_pct.toFixed(1)}%)`;
         document.getElementById('paper-winrate').textContent = `${portfolio.stats.win_rate}%`;
         
-        // Positions
+        // Positions with position size
         const tbody = document.querySelector('#paper-positions-table tbody');
-        tbody.innerHTML = portfolio.positions.map(pos => `
-            <tr>
-                <td>${pos.symbol}</td>
+        tbody.innerHTML = portfolio.positions.map(pos => {
+            const positionPct = portfolio.total_equity > 0 ? (pos.market_value / portfolio.total_equity * 100).toFixed(1) : 0;
+            return `
+            <tr class="clickable" onclick="showAnalysisModal('${pos.symbol}')">
+                <td>
+                    ${pos.symbol}
+                    <div class="position-size">${positionPct}% of portfolio</div>
+                </td>
                 <td>${pos.quantity}</td>
                 <td>$${pos.average_price.toFixed(2)}</td>
                 <td>$${pos.current_price.toFixed(2)}</td>
@@ -267,10 +418,10 @@ async function loadPaperPortfolio() {
                     $${pos.unrealized_pl.toFixed(2)} (${pos.unrealized_pl_pct.toFixed(1)}%)
                 </td>
                 <td>
-                    <button class="btn btn-danger" onclick="paperSell('${pos.symbol}', ${pos.quantity})">Sell All</button>
+                    <button class="btn btn-danger btn-small" onclick="event.stopPropagation(); paperSell('${pos.symbol}', ${pos.quantity})">Sell All</button>
                 </td>
             </tr>
-        `).join('') || '<tr><td colspan="6" style="text-align:center;">No positions</td></tr>';
+        `}).join('') || '<tr><td colspan="6" style="text-align:center;">No positions</td></tr>';
     }
     
     // Trade history
@@ -297,7 +448,7 @@ document.getElementById('paper-buy-btn').addEventListener('click', async () => {
     const price = parseFloat(document.getElementById('paper-price').value) || null;
     
     if (!symbol || !qty) {
-        alert('Enter symbol and quantity');
+        showToast('Enter symbol and quantity', 'error');
         return;
     }
     
@@ -306,12 +457,14 @@ document.getElementById('paper-buy-btn').addEventListener('click', async () => {
         body: JSON.stringify({ symbol, quantity: qty, price })
     });
     
-    alert(result.message || result.error);
     if (result.success) {
+        showToast(result.message, 'success');
         document.getElementById('paper-symbol').value = '';
         document.getElementById('paper-qty').value = '';
         document.getElementById('paper-price').value = '';
         loadPaperPortfolio();
+    } else {
+        showToast(result.error, 'error');
     }
 });
 
@@ -321,7 +474,7 @@ document.getElementById('paper-sell-btn').addEventListener('click', async () => 
     const price = parseFloat(document.getElementById('paper-price').value) || null;
     
     if (!symbol || !qty) {
-        alert('Enter symbol and quantity');
+        showToast('Enter symbol and quantity', 'error');
         return;
     }
     
@@ -330,12 +483,14 @@ document.getElementById('paper-sell-btn').addEventListener('click', async () => 
         body: JSON.stringify({ symbol, quantity: qty, price })
     });
     
-    alert(result.message || result.error);
     if (result.success) {
+        showToast(result.message, 'success');
         document.getElementById('paper-symbol').value = '';
         document.getElementById('paper-qty').value = '';
         document.getElementById('paper-price').value = '';
         loadPaperPortfolio();
+    } else {
+        showToast(result.error, 'error');
     }
 });
 
@@ -344,13 +499,18 @@ async function paperSell(symbol, qty) {
         method: 'POST',
         body: JSON.stringify({ symbol, quantity: qty })
     });
-    alert(result.message || result.error);
+    if (result.success) {
+        showToast(result.message, 'success');
+    } else {
+        showToast(result.error, 'error');
+    }
     loadPaperPortfolio();
 }
 
 document.getElementById('paper-reset-btn').addEventListener('click', async () => {
     if (confirm('Reset paper portfolio? This cannot be undone.')) {
         await api('/api/paper/reset', { method: 'POST' });
+        showToast('Portfolio reset', 'info');
         loadPaperPortfolio();
     }
 });
@@ -370,7 +530,7 @@ async function analyzeTicker() {
     // Get analysis
     const analysis = await api(`/api/analysis/${symbol}`);
     if (!analysis.success) {
-        alert(analysis.error || 'Could not analyze ticker');
+        showToast(analysis.error || 'Could not analyze ticker', 'error');
         return;
     }
     
@@ -560,11 +720,341 @@ document.getElementById('scan-btn').addEventListener('click', async () => {
     `).join('');
 });
 
-// SPY Scalper Game
+// ================== Algo Trading ==================
+
+async function loadAlgoSection() {
+    await populateConditionDropdowns();
+    await loadStrategiesList();
+    await loadBacktestStrategies();
+}
+
+function populateConditionDropdowns() {
+    // Populate entry condition dropdowns
+    document.querySelectorAll('#entry-conditions .condition-type').forEach(select => {
+        populateConditionSelect(select, 'entry');
+    });
+    
+    // Populate exit condition dropdowns
+    document.querySelectorAll('#exit-conditions .condition-type').forEach(select => {
+        populateConditionSelect(select, 'exit');
+    });
+}
+
+function populateConditionSelect(select, group) {
+    const conditions = group === 'entry' ? conditionTypes.entry_conditions : conditionTypes.exit_conditions;
+    select.innerHTML = '<option value="">Select condition...</option>';
+    conditions.forEach(c => {
+        select.innerHTML += `<option value="${c.value}" data-needs-value="${c.needs_value}" data-default="${c.default || ''}">${c.label}</option>`;
+    });
+    
+    // Handle value input visibility
+    select.addEventListener('change', () => {
+        const option = select.options[select.selectedIndex];
+        const valueInput = select.parentElement.querySelector('.condition-value');
+        if (option.dataset.needsValue === 'true') {
+            valueInput.style.display = 'block';
+            valueInput.value = option.dataset.default || '';
+        } else {
+            valueInput.style.display = 'none';
+            valueInput.value = '';
+        }
+    });
+}
+
+// Add condition button
+document.querySelectorAll('.add-condition').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const group = btn.dataset.group;
+        const container = document.getElementById(`${group}-conditions`);
+        
+        const row = document.createElement('div');
+        row.className = 'condition-row';
+        row.innerHTML = `
+            <select class="select-input condition-type" data-group="${group}">
+                <option value="">Select condition...</option>
+            </select>
+            <input type="number" class="num-input condition-value" placeholder="Value" style="display:none;">
+            <button class="btn btn-danger btn-small remove-condition">✕</button>
+        `;
+        container.appendChild(row);
+        
+        const select = row.querySelector('.condition-type');
+        populateConditionSelect(select, group);
+        
+        row.querySelector('.remove-condition').addEventListener('click', () => row.remove());
+    });
+});
+
+// Remove condition buttons
+document.querySelectorAll('.remove-condition').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const row = btn.closest('.condition-row');
+        const container = row.parentElement;
+        if (container.querySelectorAll('.condition-row').length > 1) {
+            row.remove();
+        }
+    });
+});
+
+// Create strategy
+document.getElementById('create-strategy-btn').addEventListener('click', async () => {
+    const name = document.getElementById('strat-name').value.trim();
+    const symbolsStr = document.getElementById('strat-symbols').value.trim();
+    const symbols = symbolsStr.split(',').map(s => s.trim().toUpperCase()).filter(s => s);
+    
+    if (!name) {
+        showToast('Enter strategy name', 'error');
+        return;
+    }
+    if (symbols.length === 0) {
+        showToast('Enter at least one symbol', 'error');
+        return;
+    }
+    
+    // Collect entry conditions
+    const entryConditions = [];
+    document.querySelectorAll('#entry-conditions .condition-row').forEach(row => {
+        const type = row.querySelector('.condition-type').value;
+        const value = parseFloat(row.querySelector('.condition-value').value) || null;
+        if (type) {
+            entryConditions.push({ type, value });
+        }
+    });
+    
+    // Collect exit conditions
+    const exitConditions = [];
+    document.querySelectorAll('#exit-conditions .condition-row').forEach(row => {
+        const type = row.querySelector('.condition-type').value;
+        const value = parseFloat(row.querySelector('.condition-value').value) || null;
+        if (type) {
+            exitConditions.push({ type, value });
+        }
+    });
+    
+    if (entryConditions.length === 0) {
+        showToast('Add at least one entry condition', 'error');
+        return;
+    }
+    if (exitConditions.length === 0) {
+        showToast('Add at least one exit condition', 'error');
+        return;
+    }
+    
+    const result = await api('/api/algo/strategy', {
+        method: 'POST',
+        body: JSON.stringify({
+            name,
+            symbols,
+            entry_conditions: entryConditions,
+            exit_conditions: exitConditions,
+            position_size_pct: parseFloat(document.getElementById('strat-pos-size').value) || 10,
+            max_positions: parseInt(document.getElementById('strat-max-pos').value) || 5,
+            stop_loss_pct: parseFloat(document.getElementById('strat-stop-loss').value) || null,
+            take_profit_pct: parseFloat(document.getElementById('strat-take-profit').value) || null
+        })
+    });
+    
+    if (result.success) {
+        showToast(`Strategy "${name}" created!`, 'success');
+        document.getElementById('strat-name').value = '';
+        document.getElementById('strat-symbols').value = '';
+        loadStrategiesList();
+        loadBacktestStrategies();
+    } else {
+        showToast(result.error, 'error');
+    }
+});
+
+async function loadStrategiesList() {
+    const result = await api('/api/algo/strategies');
+    const container = document.getElementById('strategies-list');
+    
+    if (!result.success || result.strategies.length === 0) {
+        container.innerHTML = '<p class="placeholder-text">No strategies yet. Create one in Strategy Builder.</p>';
+        return;
+    }
+    
+    container.innerHTML = result.strategies.map(strat => `
+        <div class="strategy-card" data-id="${strat.id}">
+            <div class="header">
+                <span class="name">${strat.name}</span>
+                <div class="status">
+                    <div class="toggle-group">
+                        <span>Enabled</span>
+                        <label class="toggle-switch">
+                            <input type="checkbox" ${strat.enabled ? 'checked' : ''} onchange="toggleStrategy('${strat.id}', 'enabled', this.checked)">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="toggle-group">
+                        <span>Live</span>
+                        <label class="toggle-switch">
+                            <input type="checkbox" ${strat.is_live ? 'checked' : ''} onchange="toggleStrategy('${strat.id}', 'is_live', this.checked)">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+            ${strat.is_live ? '<div class="live-warning">⚠️ LIVE MODE: This strategy will place REAL orders when enabled!</div>' : ''}
+            <div class="details">
+                <div>Symbols: <strong>${strat.symbols.join(', ')}</strong></div>
+                <div>Position Size: <strong>${strat.position_size_pct}%</strong></div>
+                <div>Max Positions: <strong>${strat.max_positions}</strong></div>
+                <div>Stop Loss: <strong>${strat.stop_loss_pct ? strat.stop_loss_pct + '%' : 'None'}</strong></div>
+                <div>Take Profit: <strong>${strat.take_profit_pct ? strat.take_profit_pct + '%' : 'None'}</strong></div>
+                <div>Created: <strong>${new Date(strat.created_at).toLocaleDateString()}</strong></div>
+            </div>
+            <div class="actions">
+                <button class="btn btn-primary btn-small" onclick="runBacktestForStrategy('${strat.id}')">Backtest</button>
+                <button class="btn btn-danger btn-small" onclick="deleteStrategy('${strat.id}')">Delete</button>
+            </div>
+        </div>
+    `).join('');
+}
+
+async function toggleStrategy(id, field, value) {
+    const data = {};
+    data[field] = value;
+    
+    const result = await api(`/api/algo/toggle/${id}`, {
+        method: 'POST',
+        body: JSON.stringify(data)
+    });
+    
+    if (result.success) {
+        if (field === 'is_live' && value) {
+            showToast('⚠️ Live mode enabled! Real orders will be placed.', 'error');
+        } else {
+            showToast('Strategy updated', 'success');
+        }
+        loadStrategiesList();
+    } else {
+        showToast(result.error, 'error');
+    }
+}
+
+async function deleteStrategy(id) {
+    if (!confirm('Delete this strategy?')) return;
+    
+    const result = await api(`/api/algo/strategy/${id}`, { method: 'DELETE' });
+    
+    if (result.success) {
+        showToast('Strategy deleted', 'success');
+        loadStrategiesList();
+        loadBacktestStrategies();
+    } else {
+        showToast(result.error, 'error');
+    }
+}
+
+async function loadBacktestStrategies() {
+    const result = await api('/api/algo/strategies');
+    const select = document.getElementById('backtest-strategy');
+    
+    select.innerHTML = '<option value="">Select a strategy...</option>';
+    
+    if (result.success) {
+        result.strategies.forEach(strat => {
+            select.innerHTML += `<option value="${strat.id}">${strat.name}</option>`;
+        });
+    }
+}
+
+async function runBacktestForStrategy(id) {
+    // Switch to backtester tab
+    document.querySelector('[data-tab="backtester"]').click();
+    document.getElementById('backtest-strategy').value = id;
+    document.getElementById('run-backtest-btn').click();
+}
+
+document.getElementById('run-backtest-btn').addEventListener('click', async () => {
+    const strategyId = document.getElementById('backtest-strategy').value;
+    const period = document.getElementById('backtest-period').value;
+    const capital = parseFloat(document.getElementById('backtest-capital').value) || 10000;
+    
+    if (!strategyId) {
+        showToast('Select a strategy', 'error');
+        return;
+    }
+    
+    document.getElementById('backtest-results').style.display = 'none';
+    showToast('Running backtest...', 'info');
+    
+    const result = await api('/api/algo/backtest', {
+        method: 'POST',
+        body: JSON.stringify({
+            strategy_id: strategyId,
+            period,
+            initial_capital: capital
+        })
+    });
+    
+    if (!result.success) {
+        showToast(result.error || 'Backtest failed', 'error');
+        return;
+    }
+    
+    const bt = result.result;
+    document.getElementById('backtest-results').style.display = 'block';
+    
+    // Update stats
+    document.getElementById('bt-return').textContent = `$${bt.total_return.toLocaleString()}`;
+    document.getElementById('bt-return-pct').textContent = `${bt.total_return_pct >= 0 ? '+' : ''}${bt.total_return_pct.toFixed(2)}%`;
+    document.getElementById('bt-return-pct').className = `stat-change ${bt.total_return >= 0 ? 'positive' : 'negative'}`;
+    document.getElementById('bt-winrate').textContent = `${bt.win_rate.toFixed(1)}%`;
+    document.getElementById('bt-profit-factor').textContent = bt.profit_factor.toFixed(2);
+    document.getElementById('bt-sharpe').textContent = bt.sharpe_ratio.toFixed(2);
+    document.getElementById('bt-trades').textContent = bt.total_trades;
+    document.getElementById('bt-drawdown').textContent = `-${bt.max_drawdown_pct.toFixed(2)}%`;
+    document.getElementById('bt-avg-trade').textContent = `$${bt.avg_trade_pnl.toFixed(2)}`;
+    document.getElementById('bt-hold-days').textContent = bt.avg_hold_days.toFixed(1);
+    
+    // Equity curve chart
+    if (bt.equity_curve && bt.equity_curve.length > 0) {
+        Plotly.newPlot('equity-chart', [{
+            x: bt.equity_curve.map(p => p.date),
+            y: bt.equity_curve.map(p => p.equity),
+            type: 'scatter',
+            mode: 'lines',
+            fill: 'tozeroy',
+            line: { color: bt.total_return >= 0 ? '#10b981' : '#ef4444', width: 2 },
+            fillcolor: bt.total_return >= 0 ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)'
+        }], {
+            title: 'Equity Curve',
+            margin: { t: 40, r: 20, b: 40, l: 60 },
+            paper_bgcolor: '#16161f',
+            plot_bgcolor: '#16161f',
+            font: { color: '#a0a0b0' },
+            xaxis: { showgrid: false },
+            yaxis: { showgrid: true, gridcolor: '#2a2a3a', title: 'Equity ($)' }
+        }, { responsive: true });
+    }
+    
+    // Trade log
+    const tbody = document.querySelector('#bt-trades-table tbody');
+    tbody.innerHTML = bt.trades.slice(0, 50).map(t => `
+        <tr>
+            <td>${t.symbol}</td>
+            <td>${t.entry_date}<br><small>$${t.entry_price.toFixed(2)}</small></td>
+            <td>${t.exit_date}<br><small>$${t.exit_price.toFixed(2)}</small></td>
+            <td class="${t.pnl >= 0 ? 'positive' : 'negative'}">$${t.pnl.toFixed(2)}</td>
+            <td class="${t.pnl >= 0 ? 'positive' : 'negative'}">${t.pnl_pct >= 0 ? '+' : ''}${t.pnl_pct.toFixed(1)}%</td>
+            <td>${t.hold_days}</td>
+            <td>${t.exit_reason}</td>
+        </tr>
+    `).join('') || '<tr><td colspan="7">No trades</td></tr>';
+    
+    showToast('Backtest complete!', 'success');
+});
+
+// ================== SPY Scalper Game ==================
+
+let spyPriceHistory = [];
+
 function startSpyGame() {
     if (spyGameInterval) clearInterval(spyGameInterval);
-    updateSpyGame();
-    spyGameInterval = setInterval(updateSpyGame, 3000);
+    updateSpyGame();  // Load immediately
+    spyGameInterval = setInterval(updateSpyGame, 2000);
 }
 
 async function updateSpyGame() {
@@ -585,26 +1075,51 @@ async function updateSpyGame() {
     
     document.getElementById('game-trades').textContent = game.trades;
     document.getElementById('game-high-score').textContent = `$${game.high_score.toFixed(2)}`;
+    
+    // Update price history and chart
+    if (game.price_history && game.price_history.length > 0) {
+        const times = game.price_history.map(p => new Date(p.time).toLocaleTimeString());
+        const prices = game.price_history.map(p => p.price);
+        
+        Plotly.react('spy-chart', [{
+            x: times,
+            y: prices,
+            type: 'scatter',
+            mode: 'lines',
+            line: { color: '#6366f1', width: 2 },
+            fill: 'tozeroy',
+            fillcolor: 'rgba(99, 102, 241, 0.1)'
+        }], {
+            margin: { t: 10, r: 20, b: 40, l: 60 },
+            paper_bgcolor: '#16161f',
+            plot_bgcolor: '#16161f',
+            font: { color: '#a0a0b0' },
+            xaxis: { showgrid: false },
+            yaxis: { showgrid: true, gridcolor: '#2a2a3a' }
+        }, { responsive: true, displayModeBar: false });
+    }
 }
 
 document.getElementById('game-buy-btn').addEventListener('click', async () => {
     const result = await api('/api/game/spy/buy', { method: 'POST' });
-    alert(result.message || result.error);
+    showToast(result.message || result.error, result.success ? 'success' : 'error');
     updateSpyGame();
 });
 
 document.getElementById('game-sell-btn').addEventListener('click', async () => {
     const result = await api('/api/game/spy/sell', { method: 'POST' });
-    alert(result.message || result.error);
+    showToast(result.message || result.error, result.success ? 'success' : 'error');
     updateSpyGame();
 });
 
 document.getElementById('game-reset-btn').addEventListener('click', async () => {
     await api('/api/game/spy/reset', { method: 'POST' });
+    showToast('Game reset', 'info');
     updateSpyGame();
 });
 
-// Settings - Indicator toggles
+// ================== Settings ==================
+
 async function loadIndicatorConfig() {
     const config = await api('/api/indicators/config');
     if (!config.success) return;
@@ -630,14 +1145,9 @@ async function loadIndicatorConfig() {
     });
 }
 
-// Order Modal
-const modal = document.getElementById('order-modal');
-const closeBtn = modal.querySelector('.close-btn');
+// ================== Order Modal ==================
 
-closeBtn.addEventListener('click', () => modal.classList.remove('active'));
-modal.addEventListener('click', (e) => {
-    if (e.target === modal) modal.classList.remove('active');
-});
+const modal = document.getElementById('order-modal');
 
 function openOrderModal(symbol, side, price) {
     document.getElementById('order-symbol').value = symbol;
@@ -704,12 +1214,15 @@ document.getElementById('order-form').addEventListener('submit', async (e) => {
         });
     }
     
-    alert(result.message || result.error);
     if (result.success) {
+        showToast(result.message, 'success');
         modal.classList.remove('active');
         if (account === 'paper') loadPaperPortfolio();
+    } else {
+        showToast(result.error, 'error');
     }
 });
 
-// Start app
+// ================== Start App ==================
+
 init();
