@@ -735,67 +735,64 @@ async function loadOptionChain(symbol, expiration) {
         priceBar.style.display = 'none';
     }
     
-    // Sort strikes by distance from ATM (current price in center)
-    const sortedCalls = [...chain.calls].sort((a, b) => a.strike - b.strike);
-    const sortedPuts = [...chain.puts].sort((a, b) => a.strike - b.strike);
+    // Build combined chain — calls on left, strike center, puts on right
+    const callsByStrike = {};
+    const putsByStrike = {};
+    const allStrikes = new Set();
     
-    // Find ATM strike (closest to current price)
+    chain.calls.forEach(c => { callsByStrike[c.strike] = c; allStrikes.add(c.strike); });
+    chain.puts.forEach(p => { putsByStrike[p.strike] = p; allStrikes.add(p.strike); });
+    
+    const strikes = [...allStrikes].sort((a, b) => a - b);
+    
+    // Find ATM
     const atmStrike = currentUnderlyingPrice 
-        ? sortedCalls.reduce((prev, curr) => 
-            Math.abs(curr.strike - currentUnderlyingPrice) < Math.abs(prev.strike - currentUnderlyingPrice) ? curr : prev
-          ).strike
+        ? strikes.reduce((prev, curr) => Math.abs(curr - currentUnderlyingPrice) < Math.abs(prev - currentUnderlyingPrice) ? curr : prev)
         : null;
     
-    // Render calls table
-    const callsTbody = document.querySelector('#calls-table tbody');
-    callsTbody.innerHTML = sortedCalls.map(opt => {
-        const isItm = currentUnderlyingPrice && opt.strike < currentUnderlyingPrice;
-        const isAtm = opt.strike === atmStrike;
-        const rowClass = isAtm ? 'atm-row' : (isItm ? 'itm-row' : 'otm-row');
-        const mid = (opt.bid && opt.ask) ? ((opt.bid + opt.ask) / 2).toFixed(2) : (opt.last?.toFixed(2) || '--');
-        const iv = opt.implied_volatility ? (opt.implied_volatility * 100).toFixed(1) + '%' : '--';
+    const expClean = expiration.replace(/-/g, '');
+    const tbody = document.querySelector('#combined-chain tbody');
+    tbody.innerHTML = strikes.map(strike => {
+        const call = callsByStrike[strike];
+        const put = putsByStrike[strike];
+        const isAtm = strike === atmStrike;
+        const callItm = currentUnderlyingPrice && strike < currentUnderlyingPrice;
+        const putItm = currentUnderlyingPrice && strike > currentUnderlyingPrice;
         
-        return `
-        <tr class="${rowClass} clickable" onclick="openOrderModal('${opt.symbol || symbol + expiration.replace(/-/g, '') + 'C' + Math.round(opt.strike * 1000).toString().padStart(8, '0')}', 'BUY', ${mid !== '--' ? mid : 0})" data-strike="${opt.strike}">
-            <td class="strike-col">${isAtm ? '→ ' : ''}$${opt.strike.toFixed(2)}</td>
-            <td>${opt.bid?.toFixed(2) || '--'}</td>
-            <td>${opt.ask?.toFixed(2) || '--'}</td>
-            <td>${opt.last?.toFixed(2) || '--'}</td>
-            <td>${opt.volume || 0}</td>
-            <td>${opt.open_interest || 0}</td>
-            <td>${iv}</td>
+        const rowClass = isAtm ? 'atm-row' : '';
+        const callBg = callItm ? 'style="background:rgba(16,185,129,0.08);"' : '';
+        const putBg = putItm ? 'style="background:rgba(239,68,68,0.08);"' : '';
+        const strikeStyle = isAtm ? 'style="background:rgba(99,102,241,0.2);font-weight:700;color:var(--primary);text-align:center;"' : 'style="text-align:center;font-weight:600;"';
+        
+        const callSym = symbol + expClean + 'C' + Math.round(strike * 1000).toString().padStart(8, '0');
+        const putSym = symbol + expClean + 'P' + Math.round(strike * 1000).toString().padStart(8, '0');
+        const callMid = call && call.bid && call.ask ? ((call.bid + call.ask)/2).toFixed(2) : '0';
+        const putMid = put && put.bid && put.ask ? ((put.bid + put.ask)/2).toFixed(2) : '0';
+        
+        return `<tr class="${rowClass}" id="strike-${strike}" ${isAtm ? 'data-atm="true"' : ''}>
+            <td ${callBg} class="clickable" onclick="openOrderModal('${callSym}','BUY',${callMid})">${call?.bid?.toFixed(2) || '--'}</td>
+            <td ${callBg} class="clickable" onclick="openOrderModal('${callSym}','BUY',${callMid})">${call?.ask?.toFixed(2) || '--'}</td>
+            <td ${callBg}>${call?.volume || '--'}</td>
+            <td ${callBg} style="border-right:2px solid var(--border-color);">${call?.open_interest || '--'}</td>
+            <td ${strikeStyle}>${isAtm ? '▶ ' : ''}$${strike.toFixed(2)}${isAtm ? ' ◀' : ''}</td>
+            <td ${putBg} style="border-left:2px solid var(--border-color);" class="clickable" onclick="openOrderModal('${putSym}','BUY',${putMid})">${put?.bid?.toFixed(2) || '--'}</td>
+            <td ${putBg} class="clickable" onclick="openOrderModal('${putSym}','BUY',${putMid})">${put?.ask?.toFixed(2) || '--'}</td>
+            <td ${putBg}>${put?.volume || '--'}</td>
+            <td ${putBg}>${put?.open_interest || '--'}</td>
         </tr>`;
     }).join('');
     
-    // Render puts table
-    const putsTbody = document.querySelector('#puts-table tbody');
-    putsTbody.innerHTML = sortedPuts.map(opt => {
-        const isItm = currentUnderlyingPrice && opt.strike > currentUnderlyingPrice;
-        const isAtm = opt.strike === atmStrike;
-        const rowClass = isAtm ? 'atm-row' : (isItm ? 'itm-row' : 'otm-row');
-        const mid = (opt.bid && opt.ask) ? ((opt.bid + opt.ask) / 2).toFixed(2) : (opt.last?.toFixed(2) || '--');
-        const iv = opt.implied_volatility ? (opt.implied_volatility * 100).toFixed(1) + '%' : '--';
-        
-        return `
-        <tr class="${rowClass} clickable" onclick="openOrderModal('${opt.symbol || symbol + expiration.replace(/-/g, '') + 'P' + Math.round(opt.strike * 1000).toString().padStart(8, '0')}', 'BUY', ${mid !== '--' ? mid : 0})" data-strike="${opt.strike}">
-            <td class="strike-col">${isAtm ? '→ ' : ''}$${opt.strike.toFixed(2)}</td>
-            <td>${opt.bid?.toFixed(2) || '--'}</td>
-            <td>${opt.ask?.toFixed(2) || '--'}</td>
-            <td>${opt.last?.toFixed(2) || '--'}</td>
-            <td>${opt.volume || 0}</td>
-            <td>${opt.open_interest || 0}</td>
-            <td>${iv}</td>
-        </tr>`;
-    }).join('');
-    
-    // Scroll to ATM strike
+    // Auto-scroll to ATM
     if (atmStrike) {
         setTimeout(() => {
-            const atmRow = document.querySelector(`#calls-table .atm-row`);
+            const atmRow = document.querySelector('#combined-chain [data-atm="true"]');
             if (atmRow) {
-                atmRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                const container = document.getElementById('chain-scroll');
+                if (container) {
+                    container.scrollTop = atmRow.offsetTop - container.offsetTop - (container.clientHeight / 2) + 20;
+                }
             }
-        }, 100);
+        }, 150);
     }
 }
 
