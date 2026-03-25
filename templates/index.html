@@ -151,16 +151,16 @@ PUBLIC_COM_ACCOUNT_ID=your_account_id</pre>
                 
                 <!-- Sector Quick-Pick -->
                 <div style="margin-bottom:16px;">
-                    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;">
-                        <button class="btn btn-sm" onclick="showSectorTickers('tech')" style="font-size:12px;">💻 Tech</button>
-                        <button class="btn btn-sm" onclick="showSectorTickers('finance')" style="font-size:12px;">🏦 Finance</button>
-                        <button class="btn btn-sm" onclick="showSectorTickers('healthcare')" style="font-size:12px;">💊 Healthcare</button>
-                        <button class="btn btn-sm" onclick="showSectorTickers('energy')" style="font-size:12px;">⛽ Energy</button>
-                        <button class="btn btn-sm" onclick="showSectorTickers('consumer')" style="font-size:12px;">🛒 Consumer</button>
-                        <button class="btn btn-sm" onclick="showSectorTickers('industrial')" style="font-size:12px;">🏗️ Industrial</button>
-                        <button class="btn btn-sm" onclick="showSectorTickers('semi')" style="font-size:12px;">🔌 Semi</button>
+                    <div class="sector-pick-row">
+                        <button class="btn" onclick="showSectorTickers('tech')">💻 Tech</button>
+                        <button class="btn" onclick="showSectorTickers('finance')">🏦 Finance</button>
+                        <button class="btn" onclick="showSectorTickers('healthcare')">💊 Healthcare</button>
+                        <button class="btn" onclick="showSectorTickers('energy')">⛽ Energy</button>
+                        <button class="btn" onclick="showSectorTickers('consumer')">🛒 Consumer</button>
+                        <button class="btn" onclick="showSectorTickers('industrial')">🏗️ Industrial</button>
+                        <button class="btn" onclick="showSectorTickers('semi')">🔌 Semi</button>
                     </div>
-                    <div id="sector-ticker-pills" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
+                    <div class="ticker-pills" id="sector-ticker-pills"></div>
                 </div>
 
                 <div class="search-container">

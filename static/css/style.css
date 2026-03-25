@@ -1100,3 +1100,55 @@ body {
         overflow-y: auto;
     }
 }
+
+/* Sector quick-pick buttons */
+.sector-pick-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+}
+
+.sector-pick-row .btn {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.sector-pick-row .btn:hover {
+    border-color: var(--primary);
+    color: var(--text-primary);
+    background: rgba(99, 102, 241, 0.1);
+}
+
+/* Ticker pills */
+.ticker-pills {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.ticker-pill {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    padding: 5px 12px;
+    border-radius: 16px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: 'JetBrains Mono', monospace;
+}
+
+.ticker-pill:hover {
+    border-color: var(--primary);
+    background: rgba(99, 102, 241, 0.15);
+    color: var(--primary);
+    transform: translateY(-1px);
+}

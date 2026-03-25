@@ -1321,7 +1321,7 @@ function showSectorTickers(sector) {
     const tickers = TRADING_SECTORS[sector] || [];
     const container = document.getElementById('sector-ticker-pills');
     container.innerHTML = tickers.map(t => 
-        `<button class="btn btn-sm" onclick="goToTicker('${t}')" style="font-size:11px;padding:4px 10px;background:var(--bg-tertiary);border:1px solid var(--border-color);cursor:pointer;">${t}</button>`
+        `<button class="ticker-pill" onclick="goToTicker('${t}')">${t}</button>`
     ).join('');
 }
 
