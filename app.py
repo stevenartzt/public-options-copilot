@@ -36,6 +36,16 @@ scanner = get_scanner()
 indicator_service = get_indicator_service()
 algo_service = get_algo_trading_service()
 
+# Start algo execution loop
+from services.algo_trading import AlgoExecutionLoop
+algo_loop = AlgoExecutionLoop(
+    algo_service=algo_service,
+    paper_service=paper_service,
+    trading_service=trading_service,
+    check_interval=300  # 5 minutes
+)
+algo_loop.start()
+
 # SPY Scalper game state (persistent)
 spy_game = {
     'position': None,  # {'side': 'long'/'short', 'entry': price, 'quantity': 100}
@@ -730,6 +740,18 @@ def toggle_algo_strategy(strategy_id: str):
     if result.get('success'):
         return jsonify(result)
     return jsonify(result), 404
+
+
+@app.route('/api/algo/execution-log')
+def get_algo_execution_log():
+    """Get the algo execution loop log."""
+    limit = request.args.get('limit', 50, type=int)
+    return jsonify({
+        'success': True,
+        'log': algo_loop.get_log(limit),
+        'running': algo_loop._running,
+        'positions': algo_service.forward_test_positions,
+    })
 
 
 @app.route('/api/algo/backtest', methods=['POST'])

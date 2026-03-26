@@ -933,3 +933,220 @@ def get_algo_trading_service() -> AlgoTradingService:
     if _algo_service is None:
         _algo_service = AlgoTradingService()
     return _algo_service
+
+class AlgoExecutionLoop:
+    """Background execution loop for enabled strategies."""
+    
+    def __init__(self, algo_service: 'AlgoTradingService', 
+                 paper_service=None, trading_service=None,
+                 check_interval: int = 300):
+        self.algo = algo_service
+        self.paper = paper_service
+        self.trading = trading_service
+        self.check_interval = check_interval  # seconds
+        self._thread = None
+        self._running = False
+        self.execution_log: List[Dict] = []
+        
+    def start(self):
+        """Start the execution loop in a background thread."""
+        if self._running:
+            return
+        self._running = True
+        import threading
+        self._thread = threading.Thread(target=self._run_loop, daemon=True)
+        self._thread.start()
+        print("[Algo] Execution loop started")
+    
+    def stop(self):
+        """Stop the execution loop."""
+        self._running = False
+        print("[Algo] Execution loop stopped")
+    
+    def _is_market_hours(self) -> bool:
+        """Check if market is currently open."""
+        now = datetime.now()
+        # Simple check: Mon-Fri, 9:30-16:00 ET
+        if now.weekday() >= 5:
+            return False
+        market_open = now.replace(hour=9, minute=30, second=0, microsecond=0)
+        market_close = now.replace(hour=16, minute=0, second=0, microsecond=0)
+        return market_open <= now <= market_close
+    
+    def _run_loop(self):
+        """Main execution loop — runs in background thread."""
+        import time as _time
+        while self._running:
+            try:
+                if self._is_market_hours():
+                    self._check_strategies()
+                _time.sleep(self.check_interval)
+            except Exception as e:
+                print(f"[Algo] Loop error: {e}")
+                _time.sleep(60)
+    
+    def _check_strategies(self):
+        """Check all enabled strategies for entry/exit signals."""
+        for strat_id, strategy in self.algo.strategies.items():
+            if not strategy.enabled:
+                continue
+            
+            try:
+                self._check_strategy(strat_id, strategy)
+            except Exception as e:
+                print(f"[Algo] Error checking {strategy.name}: {e}")
+    
+    def _check_strategy(self, strat_id: str, strategy):
+        """Check a single strategy for signals."""
+        if not HAS_YFINANCE:
+            return
+        
+        # Check each symbol
+        for symbol in strategy.symbols:
+            try:
+                # Get current data
+                ticker = yf.Ticker(symbol)
+                hist = ticker.history(period='60d', interval='1d')
+                if hist.empty or len(hist) < 30:
+                    continue
+                
+                close = hist['Close'].values.tolist()
+                high = hist['High'].values.tolist()
+                low = hist['Low'].values.tolist()
+                price = float(close[-1])
+                
+                analysis = self.algo._calculate_indicators(close, high, low, price)
+                
+                # Check if we have a position in this symbol for this strategy
+                positions = self.algo.forward_test_positions.get(strat_id, {})
+                
+                if symbol in positions:
+                    # Check exit conditions
+                    pos = positions[symbol]
+                    should_exit, reason = self.algo._check_exit_conditions(strategy, analysis, pos)
+                    
+                    # Also check stop/take profit
+                    if not should_exit and strategy.stop_loss_pct:
+                        pnl_pct = ((price - pos['entry_price']) / pos['entry_price']) * 100
+                        if pnl_pct < -strategy.stop_loss_pct:
+                            should_exit = True
+                            reason = f"Stop loss ({strategy.stop_loss_pct}%)"
+                    
+                    if not should_exit and strategy.take_profit_pct:
+                        pnl_pct = ((price - pos['entry_price']) / pos['entry_price']) * 100
+                        if pnl_pct > strategy.take_profit_pct:
+                            should_exit = True
+                            reason = f"Take profit ({strategy.take_profit_pct}%)"
+                    
+                    if should_exit:
+                        self._execute_exit(strat_id, strategy, symbol, price, pos, reason)
+                
+                else:
+                    # Check entry conditions
+                    # Respect max positions
+                    if len(positions) >= strategy.max_positions:
+                        continue
+                    
+                    should_enter = self.algo._check_entry_conditions(strategy, analysis)
+                    
+                    if should_enter:
+                        self._execute_entry(strat_id, strategy, symbol, price, analysis)
+                        
+            except Exception as e:
+                print(f"[Algo] Error on {symbol}: {e}")
+    
+    def _execute_entry(self, strat_id: str, strategy, symbol: str, price: float, analysis: Dict):
+        """Execute an entry — paper or live."""
+        shares = max(1, int((10000 * strategy.position_size_pct / 100) / price))
+        
+        position = {
+            'symbol': symbol,
+            'entry_price': price,
+            'entry_date': datetime.now().isoformat(),
+            'shares': shares,
+            'strategy': strategy.name,
+        }
+        
+        if strat_id not in self.algo.forward_test_positions:
+            self.algo.forward_test_positions[strat_id] = {}
+        self.algo.forward_test_positions[strat_id][symbol] = position
+        
+        log_entry = {
+            'time': datetime.now().isoformat(),
+            'strategy': strategy.name,
+            'action': 'ENTRY',
+            'symbol': symbol,
+            'price': price,
+            'shares': shares,
+            'mode': 'LIVE' if strategy.is_live else 'PAPER',
+            'analysis': {k: round(v, 2) if isinstance(v, float) else v for k, v in analysis.items()},
+        }
+        
+        if strategy.is_live and self.trading:
+            # Execute real order via Public SDK
+            try:
+                result = self.trading.place_stock_order(symbol, 'BUY', shares, price)
+                log_entry['order_result'] = result
+                log_entry['executed'] = result.get('success', False)
+            except Exception as e:
+                log_entry['error'] = str(e)
+                log_entry['executed'] = False
+        elif self.paper:
+            # Execute paper trade
+            try:
+                self.paper.buy(symbol, shares, price)
+                log_entry['executed'] = True
+            except Exception as e:
+                log_entry['error'] = str(e)
+                log_entry['executed'] = False
+        
+        self.execution_log.append(log_entry)
+        self.algo._save_state()
+        print(f"[Algo] {'LIVE' if strategy.is_live else 'PAPER'} ENTRY: {symbol} {shares} shares @ ${price:.2f} ({strategy.name})")
+    
+    def _execute_exit(self, strat_id: str, strategy, symbol: str, price: float, position: Dict, reason: str):
+        """Execute an exit — paper or live."""
+        shares = position['shares']
+        entry_price = position['entry_price']
+        pnl = round((price - entry_price) * shares, 2)
+        pnl_pct = round((price / entry_price - 1) * 100, 2)
+        
+        log_entry = {
+            'time': datetime.now().isoformat(),
+            'strategy': strategy.name,
+            'action': 'EXIT',
+            'symbol': symbol,
+            'price': price,
+            'shares': shares,
+            'pnl': pnl,
+            'pnl_pct': pnl_pct,
+            'reason': reason,
+            'mode': 'LIVE' if strategy.is_live else 'PAPER',
+        }
+        
+        if strategy.is_live and self.trading:
+            try:
+                result = self.trading.place_stock_order(symbol, 'SELL', shares, price)
+                log_entry['order_result'] = result
+                log_entry['executed'] = result.get('success', False)
+            except Exception as e:
+                log_entry['error'] = str(e)
+                log_entry['executed'] = False
+        elif self.paper:
+            try:
+                self.paper.sell(symbol, shares)
+                log_entry['executed'] = True
+            except Exception as e:
+                log_entry['error'] = str(e)
+                log_entry['executed'] = False
+        
+        # Remove position
+        del self.algo.forward_test_positions[strat_id][symbol]
+        
+        self.execution_log.append(log_entry)
+        self.algo._save_state()
+        print(f"[Algo] {'LIVE' if strategy.is_live else 'PAPER'} EXIT: {symbol} {shares} shares @ ${price:.2f} P/L: ${pnl:.2f} ({reason})")
+    
+    def get_log(self, limit: int = 50) -> List[Dict]:
+        """Get recent execution log."""
+        return self.execution_log[-limit:]
