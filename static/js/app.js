@@ -745,10 +745,26 @@ async function loadOptionChain(symbol, expiration) {
     
     const strikes = [...allStrikes].sort((a, b) => a - b);
     
-    // Find ATM
-    const atmStrike = currentUnderlyingPrice 
-        ? strikes.reduce((prev, curr) => Math.abs(curr - currentUnderlyingPrice) < Math.abs(prev - currentUnderlyingPrice) ? curr : prev)
-        : null;
+    // Find ATM — use underlying price if available, otherwise estimate from strike midpoint
+    let atmStrike = null;
+    if (currentUnderlyingPrice) {
+        atmStrike = strikes.reduce((prev, curr) => Math.abs(curr - currentUnderlyingPrice) < Math.abs(prev - currentUnderlyingPrice) ? curr : prev);
+    } else {
+        // Estimate: ATM is roughly where call bid ≈ put bid, or just use middle strike
+        const midIdx = Math.floor(strikes.length / 2);
+        atmStrike = strikes[midIdx];
+        // Better estimate: find where call value drops below put value
+        for (let i = 0; i < strikes.length - 1; i++) {
+            const call = callsByStrike[strikes[i]];
+            const put = putsByStrike[strikes[i]];
+            const nextCall = callsByStrike[strikes[i+1]];
+            if (call && put && call.bid && put.bid && call.bid < put.bid) {
+                atmStrike = strikes[i];
+                currentUnderlyingPrice = strikes[i]; // Set for ITM coloring
+                break;
+            }
+        }
+    }
     
     const expClean = expiration.replace(/-/g, '');
     const tbody = document.querySelector('#combined-chain tbody');
@@ -783,17 +799,18 @@ async function loadOptionChain(symbol, expiration) {
     }).join('');
     
     // Auto-scroll to ATM
-    if (atmStrike) {
-        setTimeout(() => {
-            const atmRow = document.querySelector('#combined-chain [data-atm="true"]');
-            if (atmRow) {
-                const container = document.getElementById('chain-scroll');
-                if (container) {
-                    container.scrollTop = atmRow.offsetTop - container.offsetTop - (container.clientHeight / 2) + 20;
-                }
-            }
-        }, 150);
-    }
+    setTimeout(() => {
+        const atmRow = document.querySelector('#combined-chain [data-atm="true"]');
+        const container = document.getElementById('chain-scroll');
+        if (atmRow && container) {
+            const rowTop = atmRow.offsetTop;
+            const containerHeight = container.clientHeight;
+            container.scrollTop = rowTop - containerHeight / 2;
+        } else if (container) {
+            // No ATM found — scroll to middle
+            container.scrollTop = container.scrollHeight / 2 - container.clientHeight / 2;
+        }
+    }, 200);
 }
 
 // Scanner

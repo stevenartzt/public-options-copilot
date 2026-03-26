@@ -1345,3 +1345,68 @@ body {
         justify-content: flex-start;
     }
 }
+
+/* Option chain combined table */
+.option-chain-table {
+    font-size: 13px;
+    border-collapse: collapse;
+    width: 100%;
+}
+
+.option-chain-table th {
+    padding: 8px 6px;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    position: sticky;
+    top: 0;
+    background: var(--bg-secondary);
+    z-index: 1;
+}
+
+.option-chain-table td {
+    padding: 6px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    font-size: 12px;
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+}
+
+.option-chain-table .strike-col,
+.option-chain-table td:nth-child(5) {
+    text-align: center;
+    font-weight: 700;
+    font-size: 13px;
+    border-left: 2px solid var(--border-color);
+    border-right: 2px solid var(--border-color);
+    background: rgba(99,102,241,0.05);
+}
+
+.option-chain-table tr[data-atm="true"] td {
+    background: rgba(99,102,241,0.15) !important;
+    font-weight: 600;
+}
+
+.option-chain-table tr[data-atm="true"] td:nth-child(5) {
+    background: rgba(99,102,241,0.3) !important;
+    color: var(--primary);
+    font-size: 14px;
+}
+
+.option-chain-table tr:hover td {
+    background: rgba(255,255,255,0.04);
+}
+
+.option-chain-table .clickable {
+    cursor: pointer;
+}
+
+.option-chain-table .clickable:hover {
+    background: rgba(99,102,241,0.1) !important;
+}
+
+.chain-table-wrapper {
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    overflow-y: auto;
+}
