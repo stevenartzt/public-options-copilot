@@ -1656,3 +1656,24 @@ body {
         font-size: 22px;
     }
 }
+
+/* Analysis modal fixes */
+#analysis-modal .modal-content {
+    max-width: 650px;
+    width: 90vw;
+}
+
+#analysis-modal .modal-content * {
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+#modal-mini-chart {
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow: hidden;
+}
+
+.js-plotly-plot, .plotly, .plot-container {
+    max-width: 100% !important;
+}

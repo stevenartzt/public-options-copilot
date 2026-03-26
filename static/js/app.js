@@ -408,7 +408,7 @@ async function showAnalysisModal(symbol) {
             const prices = chartData.close;
             const minY = Math.min(...prices) * 0.98;
             const maxY = Math.max(...prices) * 1.02;
-            Plotly.newPlot('modal-mini-chart', [{
+            const chartDiv = document.getElementById('modal-mini-chart'); chartDiv.style.width = '100%'; Plotly.newPlot('modal-mini-chart', [{
                 x: chartData.dates,
                 y: prices,
                 type: 'scatter',
