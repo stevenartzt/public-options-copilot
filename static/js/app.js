@@ -821,7 +821,7 @@ document.getElementById('scan-btn').addEventListener('click', async () => {
     const maxDte = parseInt(document.getElementById('max-dte').value);
     const limit = parseInt(document.getElementById('scan-limit').value);
     
-    document.getElementById('scan-results').innerHTML = '<div class="loading">Scanning...</div>';
+    document.getElementById('scan-results').innerHTML = '<div class="loading-state">Scanning options...</div>';
     
     // Use preset
     await api(`/api/scanner/preset/${preset}`, { method: 'POST' });
@@ -832,8 +832,18 @@ document.getElementById('scan-btn').addEventListener('click', async () => {
         body: JSON.stringify({ min_volume: minVolume, min_oi: minOi, max_dte: maxDte, limit })
     });
     
-    if (!result.success || !result.results.length) {
-        document.getElementById('scan-results').innerHTML = '<p class="placeholder-text">No options found matching criteria</p>';
+    if (!result.success) {
+        document.getElementById('scan-results').innerHTML = `<div class="error-state">Error: ${result.error || 'Scan failed'}</div>`;
+        return;
+    }
+    
+    if (!result.results || !result.results.length) {
+        document.getElementById('scan-results').innerHTML = `
+            <div class="empty-state">
+                <div class="icon">📭</div>
+                <h3>No Options Found</h3>
+                <p>Try adjusting your filters or selecting a different watchlist</p>
+            </div>`;
         return;
     }
     
@@ -1009,7 +1019,12 @@ async function loadStrategiesList() {
     const container = document.getElementById('strategies-list');
     
     if (!result.success || result.strategies.length === 0) {
-        container.innerHTML = '<p class="placeholder-text">No strategies yet. Create one in Strategy Builder.</p>';
+        container.innerHTML = `
+            <div class="empty-state">
+                <div class="icon">🤖</div>
+                <h3>No Strategies Yet</h3>
+                <p>Go to Strategy Builder to create your first algo trading strategy</p>
+            </div>`;
         return;
     }
     
@@ -1194,7 +1209,10 @@ async function loadCompareStrategiesCheckboxes() {
     const container = document.getElementById('compare-strategy-checkboxes');
     
     if (!result.success || result.strategies.length === 0) {
-        container.innerHTML = '<p class="placeholder-text">No strategies available. Create some first!</p>';
+        container.innerHTML = `
+            <div class="empty-state" style="padding: 20px;">
+                <p>No strategies available. Create some in Strategy Builder first!</p>
+            </div>`;
         return;
     }
     

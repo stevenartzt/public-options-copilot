@@ -1410,3 +1410,247 @@ body {
     border-radius: 8px;
     overflow-y: auto;
 }
+
+/* ================== Help Section ================== */
+.help-list {
+    list-style: none;
+    padding: 0;
+    margin: 12px 0;
+}
+
+.help-list li {
+    padding: 8px 0;
+    padding-left: 24px;
+    position: relative;
+    color: var(--text-secondary);
+    font-size: 14px;
+    line-height: 1.5;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.help-list li:last-child {
+    border-bottom: none;
+}
+
+.help-list li:before {
+    content: "•";
+    position: absolute;
+    left: 8px;
+    color: var(--accent);
+}
+
+.help-list li strong {
+    color: var(--text-primary);
+}
+
+/* ================== UI Polish: Consistent Cards ================== */
+.card {
+    padding: 16px;
+}
+
+.stat-card {
+    padding: 16px;
+    min-height: 100px;
+}
+
+/* ================== UI Polish: Consistent Headings ================== */
+.section h1 {
+    font-size: 24px;
+    font-weight: 600;
+    margin-bottom: 20px;
+}
+
+.section h2, .card h2 {
+    font-size: 18px;
+    font-weight: 500;
+    margin: 0 0 12px 0;
+    color: var(--text-primary);
+}
+
+.section h3, .card h3 {
+    font-size: 16px;
+    font-weight: 500;
+    margin: 16px 0 12px 0;
+    color: var(--text-secondary);
+}
+
+.section h4, .card h4 {
+    font-size: 14px;
+    font-weight: 500;
+    margin: 12px 0 8px 0;
+    color: var(--text-secondary);
+}
+
+/* ================== UI Polish: Consistent Buttons ================== */
+.btn {
+    border-radius: 6px;
+}
+
+.btn-small {
+    border-radius: 6px;
+}
+
+/* ================== UI Polish: Empty/Loading/Error States ================== */
+.empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--text-muted);
+}
+
+.empty-state .icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+    opacity: 0.5;
+}
+
+.empty-state h3 {
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+}
+
+.empty-state p {
+    font-size: 14px;
+}
+
+.loading-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--text-secondary);
+}
+
+.loading-state:before {
+    content: "⏳";
+    display: block;
+    font-size: 32px;
+    margin-bottom: 12px;
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+.error-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--danger);
+    background: rgba(239, 68, 68, 0.05);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    border-radius: 8px;
+}
+
+/* ================== UI Polish: Table Numbers Alignment ================== */
+.data-table td {
+    font-variant-numeric: tabular-nums;
+}
+
+.data-table td:nth-child(n+2) {
+    text-align: right;
+}
+
+.data-table td:first-child {
+    text-align: left;
+}
+
+.data-table th:nth-child(n+2) {
+    text-align: right;
+}
+
+/* ================== Table Wrapper for Mobile ================== */
+.table-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin: 0 -4px;
+    padding: 0 4px;
+}
+
+/* ================== UI Polish: Mobile Responsive ================== */
+@media (max-width: 768px) {
+    .sidebar {
+        width: 60px;
+        overflow: hidden;
+    }
+    
+    .logo-text,
+    .nav-item span:not(.nav-icon),
+    .api-status .status-text {
+        display: none;
+    }
+    
+    .main-content {
+        margin-left: 60px;
+        padding: 16px;
+    }
+    
+    .cards-row {
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+    }
+    
+    .section h1 {
+        font-size: 20px;
+    }
+    
+    /* Tables scroll horizontally on mobile */
+    .table-wrapper {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    .data-table {
+        min-width: 500px;
+    }
+    
+    /* Stack filter rows */
+    .filter-row {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .filter-row label {
+        width: 100%;
+        margin-bottom: 8px;
+    }
+    
+    .search-container {
+        flex-direction: column;
+    }
+    
+    .search-input {
+        max-width: 100%;
+    }
+    
+    /* Sector grid */
+    .sector-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    /* Game buttons */
+    .game-buttons {
+        flex-direction: column;
+    }
+    
+    .game-buttons .btn {
+        width: 100%;
+    }
+}
+
+@media (max-width: 480px) {
+    .cards-row {
+        grid-template-columns: 1fr;
+    }
+    
+    .sector-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .stat-card {
+        padding: 12px;
+        min-height: auto;
+    }
+    
+    .stat-value {
+        font-size: 22px;
+    }
+}

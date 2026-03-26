@@ -45,6 +45,10 @@
                     <span class="nav-icon">⚡</span>
                     <span>SPY Scalper</span>
                 </a>
+                <a href="#" class="nav-item" data-section="help">
+                    <span class="nav-icon">❓</span>
+                    <span>Help</span>
+                </a>
                 <a href="#" class="nav-item" data-section="settings">
                     <span class="nav-icon">⚙️</span>
                     <span>Settings</span>
@@ -85,7 +89,7 @@
                 
                 <h2>Sector Sentiment</h2>
                 <div class="sector-grid" id="sector-grid">
-                    <div class="loading">Loading sentiment data...</div>
+                    <div class="loading-state" style="grid-column: 1/-1;">Loading sentiment data...</div>
                 </div>
                 <div class="sector-detail" id="sector-detail"></div>
             </section>
@@ -123,19 +127,23 @@ PUBLIC_COM_ACCOUNT_ID=your_account_id</pre>
                                 </div>
                             </div>
                             <h3>Positions</h3>
-                            <table class="data-table" id="real-positions-table">
-                                <thead>
-                                    <tr>
-                                        <th>Symbol</th>
-                                        <th>Qty</th>
-                                        <th>Avg Price</th>
-                                        <th>Current</th>
-                                        <th>P/L</th>
-                                        <th>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody></tbody>
-                            </table>
+                            <div class="table-wrapper">
+                                <table class="data-table" id="real-positions-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Symbol</th>
+                                            <th>Qty</th>
+                                            <th>Avg Price</th>
+                                            <th>Current</th>
+                                            <th>P/L</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr><td colspan="6" class="empty-state">No positions yet</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -268,7 +276,11 @@ PUBLIC_COM_ACCOUNT_ID=your_account_id</pre>
                 </div>
                 
                 <div id="scan-results">
-                    <p class="placeholder-text">Click "Scan Now" to find options opportunities</p>
+                    <div class="empty-state">
+                        <div class="icon">🔍</div>
+                        <h3>Ready to Scan</h3>
+                        <p>Select a watchlist and click "Scan Now" to find high-probability options trades</p>
+                    </div>
                 </div>
             </section>
             
@@ -307,34 +319,42 @@ PUBLIC_COM_ACCOUNT_ID=your_account_id</pre>
                 </div>
                 
                 <h3>Positions</h3>
-                <table class="data-table" id="paper-positions-table">
-                    <thead>
-                        <tr>
-                            <th>Symbol</th>
-                            <th>Qty</th>
-                            <th>Avg Price</th>
-                            <th>Current</th>
-                            <th>P/L</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
+                <div class="table-wrapper">
+                    <table class="data-table" id="paper-positions-table">
+                        <thead>
+                            <tr>
+                                <th>Symbol</th>
+                                <th>Qty</th>
+                                <th>Avg Price</th>
+                                <th>Current</th>
+                                <th>P/L</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td colspan="6" class="empty-state">No positions yet — buy something above!</td></tr>
+                        </tbody>
+                    </table>
+                </div>
                 
                 <h3>Trade History</h3>
-                <table class="data-table" id="paper-history-table">
-                    <thead>
-                        <tr>
-                            <th>Time</th>
-                            <th>Symbol</th>
-                            <th>Side</th>
-                            <th>Qty</th>
-                            <th>Price</th>
-                            <th>Total</th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
+                <div class="table-wrapper">
+                    <table class="data-table" id="paper-history-table">
+                        <thead>
+                            <tr>
+                                <th>Time</th>
+                                <th>Symbol</th>
+                                <th>Side</th>
+                                <th>Qty</th>
+                                <th>Price</th>
+                                <th>Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td colspan="6" class="empty-state">No trades yet</td></tr>
+                        </tbody>
+                    </table>
+                </div>
                 
                 <button id="paper-reset-btn" class="btn btn-danger" style="margin-top: 20px;">Reset Portfolio</button>
             </section>
@@ -481,20 +501,24 @@ PUBLIC_COM_ACCOUNT_ID=your_account_id</pre>
                         <div id="equity-chart" class="chart-container" style="height: 300px;"></div>
                         
                         <h4>Trade Log</h4>
-                        <table class="data-table" id="bt-trades-table">
-                            <thead>
-                                <tr>
-                                    <th>Symbol</th>
-                                    <th>Entry</th>
-                                    <th>Exit</th>
-                                    <th>P/L</th>
-                                    <th>P/L %</th>
-                                    <th>Days</th>
-                                    <th>Exit Reason</th>
-                                </tr>
-                            </thead>
-                            <tbody></tbody>
-                        </table>
+                        <div class="table-wrapper">
+                            <table class="data-table" id="bt-trades-table">
+                                <thead>
+                                    <tr>
+                                        <th>Symbol</th>
+                                        <th>Entry</th>
+                                        <th>Exit</th>
+                                        <th>P/L</th>
+                                        <th>P/L %</th>
+                                        <th>Days</th>
+                                        <th>Exit Reason</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr><td colspan="7" class="empty-state">Run a backtest to see trades</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
                 
@@ -532,20 +556,22 @@ PUBLIC_COM_ACCOUNT_ID=your_account_id</pre>
                         <div id="compare-equity-chart" class="chart-container" style="height: 350px;"></div>
                         
                         <h4>Performance Comparison</h4>
-                        <table class="data-table" id="compare-table">
-                            <thead>
-                                <tr>
-                                    <th>Strategy</th>
-                                    <th>Trades</th>
-                                    <th>Win Rate</th>
-                                    <th>Profit Factor</th>
-                                    <th>Sharpe</th>
-                                    <th>Return</th>
-                                    <th>Max DD</th>
-                                </tr>
-                            </thead>
-                            <tbody></tbody>
-                        </table>
+                        <div class="table-wrapper">
+                            <table class="data-table" id="compare-table">
+                                <thead>
+                                    <tr>
+                                        <th>Strategy</th>
+                                        <th>Trades</th>
+                                        <th>Win Rate</th>
+                                        <th>Profit Factor</th>
+                                        <th>Sharpe</th>
+                                        <th>Return</th>
+                                        <th>Max DD</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
                 
@@ -603,6 +629,116 @@ PUBLIC_COM_ACCOUNT_ID=your_account_id</pre>
                 </div>
             </section>
             
+            <!-- Help Section -->
+            <section id="help" class="section">
+                <h1>❓ Help & Guide</h1>
+                <p class="section-desc">Learn how to use every feature of Options Copilot</p>
+                
+                <div class="card" style="margin-bottom: 16px;">
+                    <h2>📊 Dashboard</h2>
+                    <ul class="help-list">
+                        <li><strong>Market Overview</strong> — See VIX level, SPY price, and overall market sentiment at a glance</li>
+                        <li><strong>Sector Sentiment</strong> — 11 sectors with daily/weekly/monthly performance and bullish/bearish signals</li>
+                        <li><strong>Click any sector card</strong> — Expands to show ETF details and leading tickers with live quotes</li>
+                        <li><strong>VIX Interpretation</strong> — Under 15 = low volatility, 15-25 = normal, 25+ = elevated fear</li>
+                    </ul>
+                </div>
+                
+                <div class="card" style="margin-bottom: 16px;">
+                    <h2>💼 Portfolio</h2>
+                    <ul class="help-list">
+                        <li><strong>Real Portfolio tab</strong> — Shows your actual Public.com holdings when API credentials are configured</li>
+                        <li><strong>Paper Portfolio tab</strong> — Shows your paper trading positions for practice</li>
+                        <li><strong>Without API key</strong> — Displays "Connect your account" message with setup instructions</li>
+                        <li><strong>Click any position</strong> — Opens full technical analysis modal for that underlying</li>
+                        <li><strong>Position size %</strong> — Shows what percentage of your portfolio each position represents</li>
+                    </ul>
+                </div>
+                
+                <div class="card" style="margin-bottom: 16px;">
+                    <h2>📈 Trading</h2>
+                    <ul class="help-list">
+                        <li><strong>Ticker Search</strong> — Enter any symbol to get full technical analysis (RSI, MACD, ATR, ADX, trend, regime)</li>
+                        <li><strong>Sector Quick-Pick</strong> — Click Tech, Finance, Healthcare, etc. to see popular tickers in that sector</li>
+                        <li><strong>Timeline Selector</strong> — Choose chart period: 5D, 1M, 3M, 6M, or 1Y</li>
+                        <li><strong>DTE Quick-Picks</strong> — Click 3D, 1W, 1M, etc. to jump to the nearest expiration</li>
+                        <li><strong>Option Chain</strong> — Combined calls/puts view with strike in the center</li>
+                        <li><strong>ATM Auto-Scroll</strong> — Chain automatically scrolls to the at-the-money strike</li>
+                        <li><strong>ITM Highlighting</strong> — In-the-money options have a subtle green (calls) or red (puts) background</li>
+                        <li><strong>Click any strike</strong> — Opens order modal to place a paper or real trade</li>
+                    </ul>
+                </div>
+                
+                <div class="card" style="margin-bottom: 16px;">
+                    <h2>🔍 Scanner</h2>
+                    <ul class="help-list">
+                        <li><strong>Edge-Based Scoring</strong> — Finds high-probability option trades ranked by directional alignment, IV rank, delta, and volume</li>
+                        <li><strong>Preset Watchlists</strong> — Blue chip, tech, financials, healthcare, energy, or high-volatility stocks</li>
+                        <li><strong>Filters</strong> — Set minimum volume, open interest, and max DTE to narrow results</li>
+                        <li><strong>Signal Types</strong> — STRONG_BUY, BUY with win probability and risk/reward ratio</li>
+                        <li><strong>Click Trade</strong> — Opens order modal for any scanned option</li>
+                    </ul>
+                </div>
+                
+                <div class="card" style="margin-bottom: 16px;">
+                    <h2>📝 Paper Trading</h2>
+                    <ul class="help-list">
+                        <li><strong>Virtual $10,000</strong> — Practice trading with no real money at risk</li>
+                        <li><strong>Quick Trade</strong> — Enter symbol, quantity, and optional price to buy or sell</li>
+                        <li><strong>Positions Table</strong> — See all open positions with real-time P/L</li>
+                        <li><strong>Trade History</strong> — Complete log of all paper trades</li>
+                        <li><strong>Win Rate</strong> — Tracks your winning vs losing trades</li>
+                        <li><strong>Reset Anytime</strong> — Click "Reset Portfolio" to start fresh with $10,000</li>
+                    </ul>
+                </div>
+                
+                <div class="card" style="margin-bottom: 16px;">
+                    <h2>🤖 Algo Trading</h2>
+                    <ul class="help-list">
+                        <li><strong>Strategy Builder</strong> — Create entry/exit rules using dropdowns (RSI, MACD, ATR, trend, regime conditions)</li>
+                        <li><strong>Entry Conditions</strong> — All conditions must be true (AND logic) to enter a trade</li>
+                        <li><strong>Exit Conditions</strong> — Any condition can trigger exit (OR logic)</li>
+                        <li><strong>Position Sizing</strong> — Set % of portfolio per trade, max positions, stop loss, take profit</li>
+                        <li><strong>Enabled Toggle</strong> — When ON, strategy auto-executes paper trades when conditions are met</li>
+                        <li><strong>Live Toggle</strong> — ⚠️ When ON, strategy executes REAL orders via Public.com API (requires API key)</li>
+                        <li><strong>Backtester</strong> — Run any strategy against historical data (3mo to 5y) and see equity curve + metrics</li>
+                        <li><strong>Compare Strategies</strong> — Select 2-5 strategies to backtest side by side with overlaid equity curves</li>
+                    </ul>
+                </div>
+                
+                <div class="card" style="margin-bottom: 16px;">
+                    <h2>⚡ SPY Scalper</h2>
+                    <ul class="help-list">
+                        <li><strong>0DTE Practice Game</strong> — Simulated trading for same-day expiry SPY options</li>
+                        <li><strong>Live SPY Price</strong> — Real-time price with 2-second updates</li>
+                        <li><strong>One-Click Trading</strong> — BUY CALL or BUY PUT at the nearest ATM strike</li>
+                        <li><strong>Position Display</strong> — Shows your current option with entry price</li>
+                        <li><strong>Close Button</strong> — Appears when you have a position, shows current P/L</li>
+                        <li><strong>Session P/L</strong> — Tracks total profit/loss for this session</li>
+                        <li><strong>High Score</strong> — Your best session P/L is saved locally</li>
+                    </ul>
+                </div>
+                
+                <div class="card" style="margin-bottom: 16px;">
+                    <h2>⚙️ Settings</h2>
+                    <ul class="help-list">
+                        <li><strong>API Configuration</strong> — Instructions for adding Public.com credentials to enable live trading</li>
+                        <li><strong>Indicator Toggles</strong> — Enable/disable chart overlays (SMA, Bollinger Bands, etc.)</li>
+                        <li><strong>Preferences</strong> — All settings are saved locally in your browser</li>
+                    </ul>
+                </div>
+                
+                <div class="card">
+                    <h2>💡 Tips</h2>
+                    <ul class="help-list">
+                        <li><strong>Works without API keys</strong> — Paper trading, sentiment analysis, and backtesting are all free</li>
+                        <li><strong>Click positions for analysis</strong> — Any position in Portfolio or Paper Trading opens a detailed analysis modal</li>
+                        <li><strong>Use keyboard</strong> — Press Enter in the ticker search to analyze, ESC to close modals</li>
+                        <li><strong>Mobile friendly</strong> — Sidebar collapses on small screens, tables scroll horizontally</li>
+                    </ul>
+                </div>
+            </section>
+            
             <!-- Settings Section -->
             <section id="settings" class="section">
                 <h1>Settings</h1>
@@ -624,17 +760,48 @@ PUBLIC_COM_ACCOUNT_ID=your_account_id_here</pre>
                 </div>
                 
                 <div class="card">
-                    <h3>About</h3>
-                    <p><strong>Options Copilot</strong> - Competition Entry for Public.com</p>
-                    <p>Features:</p>
-                    <ul>
-                        <li>📊 Real-time market sentiment analysis</li>
-                        <li>💼 Portfolio management (real & paper)</li>
-                        <li>📈 Technical analysis with indicators</li>
-                        <li>🔍 Edge-based options scanner</li>
-                        <li>📝 Paper trading for practice</li>
-                        <li>⚡ SPY Scalper game</li>
+                    <h3>About Options Copilot</h3>
+                    <p style="font-size: 18px; font-weight: 600; color: var(--accent); margin-bottom: 12px;">
+                        Options Copilot — Public.com Competition Entry
+                    </p>
+                    
+                    <p style="margin-bottom: 16px; color: var(--text-secondary);">
+                        A comprehensive options trading platform with real-time analysis, paper trading, 
+                        algorithmic strategy building, and live Public.com integration.
+                    </p>
+                    
+                    <h4 style="margin: 16px 0 8px;">Built With</h4>
+                    <ul class="help-list">
+                        <li><strong>Backend:</strong> Python, Flask, Public.com SDK</li>
+                        <li><strong>Data:</strong> yfinance for market data and historical prices</li>
+                        <li><strong>Charts:</strong> Plotly.js for interactive visualizations</li>
+                        <li><strong>Frontend:</strong> Vanilla JS, CSS custom properties</li>
                     </ul>
+                    
+                    <h4 style="margin: 16px 0 8px;">Key Features</h4>
+                    <ul class="help-list">
+                        <li>📊 Real-time market sentiment with 11 sector analysis</li>
+                        <li>💼 Live portfolio integration with Public.com API</li>
+                        <li>📈 Technical analysis: RSI, MACD, ATR, ADX, Bollinger Bands, regime detection</li>
+                        <li>🔍 Edge-based options scanner with win probability scoring</li>
+                        <li>📝 Paper trading with $10,000 virtual portfolio</li>
+                        <li>🤖 Algo strategy builder with backtesting and comparison</li>
+                        <li>⚡ SPY Scalper game for 0DTE practice</li>
+                    </ul>
+                    
+                    <div style="margin-top: 20px; padding: 16px; background: var(--bg-tertiary); border-radius: 8px; border-left: 4px solid var(--success);">
+                        <p style="margin: 0; font-size: 14px;">
+                            <strong>✅ Works without API keys</strong> — Paper trading, sentiment analysis, 
+                            technical analysis, backtesting, and the SPY game all work out of the box. 
+                            Add your Public.com credentials only when you're ready to trade live.
+                        </p>
+                    </div>
+                    
+                    <p style="margin-top: 20px; color: var(--text-muted); font-size: 13px;">
+                        <a href="https://github.com/your-repo/options-copilot" target="_blank" style="color: var(--accent);">
+                            📦 View on GitHub
+                        </a>
+                    </p>
                 </div>
             </section>
         </main>
