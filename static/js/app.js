@@ -766,7 +766,7 @@ async function loadOptionChain(symbol, expiration) {
         }
     }
     
-    const expClean = expiration.replace(/-/g, '');
+    const expClean = expiration.replace(/-/g, '').slice(2); // 2-digit year for OSI
     const tbody = document.querySelector('#combined-chain tbody');
     tbody.innerHTML = strikes.map(strike => {
         const call = callsByStrike[strike];
@@ -780,8 +780,8 @@ async function loadOptionChain(symbol, expiration) {
         const putBg = putItm ? 'style="background:rgba(239,68,68,0.08);"' : '';
         const strikeStyle = isAtm ? 'style="background:rgba(99,102,241,0.2);font-weight:700;color:var(--primary);text-align:center;"' : 'style="text-align:center;font-weight:600;"';
         
-        const callSym = symbol + expClean + 'C' + Math.round(strike * 1000).toString().padStart(8, '0');
-        const putSym = symbol + expClean + 'P' + Math.round(strike * 1000).toString().padStart(8, '0');
+        const callSym = call?.symbol || (symbol + expClean + 'C' + Math.round(strike * 1000).toString().padStart(8, '0'));
+        const putSym = put?.symbol || (symbol + expClean + 'P' + Math.round(strike * 1000).toString().padStart(8, '0'));
         const callMid = call && call.bid && call.ask ? ((call.bid + call.ask)/2).toFixed(2) : '0';
         const putMid = put && put.bid && put.ask ? ((put.bid + put.ask)/2).toFixed(2) : '0';
         
