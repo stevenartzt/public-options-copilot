@@ -193,3 +193,77 @@ The following SDK methods are used:
 | `perform_preflight_calculation()` | Trading | Preview order before execution |
 | `get_order()` | Orders | Check order status |
 | `cancel_order()` | Orders | Cancel open orders |
+
+## Example OpenClaw Workflows
+
+### 1. Morning Market Brief
+**User:** "Give me a morning market brief"
+**Agent:** Runs sentiment analysis + portfolio check
+```
+→ Dashboard: Sector sentiment cards load (11 sectors)
+→ VIX at 25.5 — Elevated (Concern)
+→ Leading sectors: Energy (+2.0%), Materials (+1.9%)
+→ Lagging: Real Estate (-0.1%), Communication (+0.3%)
+→ Portfolio: 3 positions, +$322 today
+```
+
+### 2. Analyze a Stock Before Trading
+**User:** "Should I buy NVDA calls?"
+**Agent:** Runs technical analysis + options scan
+```
+→ Trading tab: NVDA analysis loads
+→ Trend: BEARISH (100%), RSI: 38, ADX: 29, Regime: TRENDING
+→ Option chain: nearest expirations with ATM highlighted
+→ Scanner: NVDA puts score 74 (bearish alignment)
+→ Recommendation: "NVDA is bearish. Consider puts instead of calls."
+```
+
+### 3. Paper Trade Practice
+**User:** "Paper trade 10 shares of AAPL"
+**Agent:** Executes paper buy
+```
+→ Paper Trading: Bought 10 AAPL @ $217.50
+→ Portfolio updated: $7,825 cash, 1 position
+→ P/L tracking starts automatically
+```
+
+### 4. Backtest a Strategy
+**User:** "Backtest RSI mean reversion on SPY for the last year"
+**Agent:** Runs algo backtest
+```
+→ Algo Trading: RSI Mean Reversion selected
+→ Backtest results: 28 trades, 50% WR, -0.2% return
+→ Equity curve chart rendered
+→ Trade log with entry/exit dates and P/L
+```
+
+### 5. Compare Strategies
+**User:** "Which strategy works better — RSI or MACD?"
+**Agent:** Runs comparison backtest
+```
+→ Compare tab: Both strategies selected
+→ Overlaid equity curves (RSI in blue, MACD in green)
+→ Comparison table: RSI 50% WR vs MACD 0% WR
+→ Winner highlighted per metric
+```
+
+### 6. Quick SPY Scalp
+**User:** "Let me practice SPY scalping"
+**Agent:** Opens SPY Scalper game
+```
+→ SPY Scalper: Live price $660.50
+→ Buttons: BUY $661 CALL ($1.50) / BUY $660 PUT ($1.50)
+→ Click to enter, click to close
+→ Session P/L tracks performance
+```
+
+### 7. Full Trading Flow
+**User:** "Find me the best options play right now"
+**Agent:** Runs full pipeline
+```
+→ Scanner: Scans blue-chip watchlist (90 tickers)
+→ Results: 3 calls, 5 puts ranked by edge score
+→ Top pick: AAPL $217.50 PUT, score 77, WR 58%
+→ User clicks: Order modal opens with preflight preview
+→ Confirms: Order placed via Public.com API
+```
