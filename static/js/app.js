@@ -385,12 +385,15 @@ async function showAnalysisModal(symbol) {
         // Mini chart
         if (result.chart_data) {
             const chartData = result.chart_data;
+            const prices = chartData.close;
+            const minY = Math.min(...prices) * 0.98;
+            const maxY = Math.max(...prices) * 1.02;
             Plotly.newPlot('modal-mini-chart', [{
                 x: chartData.dates,
-                y: chartData.close,
+                y: prices,
                 type: 'scatter',
                 mode: 'lines',
-                fill: 'tozeroy',
+                fill: 'tonexty',
                 line: { color: '#6366f1', width: 2 },
                 fillcolor: 'rgba(99, 102, 241, 0.1)'
             }], {
@@ -399,7 +402,7 @@ async function showAnalysisModal(symbol) {
                 plot_bgcolor: '#16161f',
                 font: { color: '#a0a0b0' },
                 xaxis: { showgrid: false },
-                yaxis: { showgrid: true, gridcolor: '#2a2a3a' }
+                yaxis: { showgrid: true, gridcolor: '#2a2a3a', range: [minY, maxY] }
             }, { responsive: true, displayModeBar: false });
         }
         
