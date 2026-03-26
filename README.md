@@ -4,7 +4,7 @@
 
 A comprehensive options trading assistant featuring real-time analysis, paper trading, and live trading integration with Public.com.
 
-![Dashboard](https://via.placeholder.com/800x400?text=Options+Copilot+Dashboard)
+
 
 ## Features
 
