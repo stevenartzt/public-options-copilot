@@ -263,6 +263,26 @@ async function loadPortfolio() {
         }
     }
     
+    // Load pending orders
+    const orders = await api('/api/orders/open');
+    if (orders.success && orders.orders) {
+        const ordersTbody = document.querySelector('#pending-orders-table tbody');
+        if (orders.orders.length > 0) {
+            ordersTbody.innerHTML = orders.orders.map(o => `
+                <tr>
+                    <td>${o.symbol}</td>
+                    <td class="${o.side === 'BUY' ? 'positive' : 'negative'}">${o.side}</td>
+                    <td>${o.quantity}</td>
+                    <td>$${o.limit_price?.toFixed(2) || '--'}</td>
+                    <td><span class="badge" style="background:rgba(245,158,11,0.2);color:#f59e0b;padding:2px 8px;border-radius:4px;font-size:11px;">${o.status}</span></td>
+                    <td><button class="btn btn-danger btn-small" onclick="cancelOrder('${o.order_id}')">Cancel</button></td>
+                </tr>
+            `).join('');
+        } else {
+            ordersTbody.innerHTML = '<tr><td colspan="6" class="empty-state">No pending orders</td></tr>';
+        }
+    }
+
     // Also load paper portfolio in the second tab
     await loadPaperPortfolioTab();
 }
@@ -1632,3 +1652,9 @@ function showSectorTickers(sector) {
     ).join('');
 }
 
+
+async function cancelOrder(orderId) {
+    const result = await api(`/api/order/${orderId}/cancel`, { method: 'POST' });
+    showToast(result.message || result.error, result.success ? 'success' : 'error');
+    loadPortfolio();
+}
