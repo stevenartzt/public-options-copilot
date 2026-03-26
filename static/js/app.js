@@ -1341,7 +1341,26 @@ async function updateSpyGame() {
     
     document.getElementById('game-spy-price').textContent = `$${game.spy_price?.toFixed(2) || '--'}`;
     document.getElementById('game-position').textContent = game.position ? 
-        `${game.position.side.toUpperCase()} @ $${game.position.entry.toFixed(2)}` : 'None';
+        `$${game.position.strike} ${game.position.type} @ $${game.position.entry_price.toFixed(2)}` : 'None';
+    
+    // Update call/put buttons with nearest strikes
+    const callBtn = document.getElementById('game-buy-btn');
+    const putBtn = document.getElementById('game-sell-btn');
+    if (game.call_strike && game.put_strike) {
+        callBtn.textContent = `📈 BUY $${game.call_strike} CALL ($${game.call_price})`;
+        putBtn.textContent = `📉 BUY $${game.put_strike} PUT ($${game.put_price})`;
+    }
+    
+    // Show/hide close button
+    const closeBtn = document.getElementById('game-close-btn');
+    if (closeBtn) {
+        if (game.position) {
+            closeBtn.style.display = 'inline-block';
+            closeBtn.textContent = `❌ CLOSE ${game.position.type} (P/L: $${game.current_pnl.toFixed(2)})`;
+        } else {
+            closeBtn.style.display = 'none';
+        }
+    }
     
     const pnlEl = document.getElementById('game-current-pnl');
     pnlEl.textContent = `$${game.current_pnl.toFixed(2)}`;
@@ -1381,12 +1400,18 @@ async function updateSpyGame() {
 }
 
 document.getElementById('game-buy-btn').addEventListener('click', async () => {
-    const result = await api('/api/game/spy/buy', { method: 'POST' });
+    const result = await api('/api/game/spy/buy', { method: 'POST', body: JSON.stringify({type: 'CALL'}) });
     showToast(result.message || result.error, result.success ? 'success' : 'error');
     updateSpyGame();
 });
 
 document.getElementById('game-sell-btn').addEventListener('click', async () => {
+    const result = await api('/api/game/spy/buy', { method: 'POST', body: JSON.stringify({type: 'PUT'}) });
+    showToast(result.message || result.error, result.success ? 'success' : 'error');
+    updateSpyGame();
+});
+
+document.getElementById('game-close-btn')?.addEventListener('click', async () => {
     const result = await api('/api/game/spy/sell', { method: 'POST' });
     showToast(result.message || result.error, result.success ? 'success' : 'error');
     updateSpyGame();

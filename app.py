@@ -427,7 +427,7 @@ def get_open_orders():
 
 @app.route('/api/game/spy')
 def get_spy_game():
-    """Get SPY scalper game state."""
+    """Get SPY scalper game state — options style."""
     spy_price = market_data.get_spy_price()
     
     # Track price history for mini chart
@@ -436,25 +436,43 @@ def get_spy_game():
             'time': datetime.now().isoformat(),
             'price': spy_price
         })
-        # Keep last 50 prices
         if len(spy_game['price_history']) > 50:
             spy_game['price_history'] = spy_game['price_history'][-50:]
+    
+    # Calculate nearest call/put strikes
+    call_strike = None
+    put_strike = None
+    if spy_price:
+        # Round to nearest $1
+        call_strike = int(spy_price) + 1  # One strike above
+        put_strike = int(spy_price)       # One strike at/below
+    
+    # Estimate option prices (simplified: ~$1.50 ATM, scales with delta)
+    call_price = max(0.05, round(max(0, spy_price - call_strike) + 1.50, 2)) if spy_price else 0
+    put_price = max(0.05, round(max(0, put_strike - spy_price) + 1.50, 2)) if spy_price else 0
     
     # Calculate current P/L if in position
     current_pnl = 0
     if spy_game['position'] and spy_price:
-        entry = spy_game['position']['entry']
-        qty = spy_game['position']['quantity']
-        if spy_game['position']['side'] == 'long':
-            current_pnl = (spy_price - entry) * qty
+        pos = spy_game['position']
+        if pos['type'] == 'CALL':
+            current_option_price = max(0.05, round(max(0, spy_price - pos['strike']) + 1.50, 2))
         else:
-            current_pnl = (entry - spy_price) * qty
+            current_option_price = max(0.05, round(max(0, pos['strike'] - spy_price) + 1.50, 2))
+        current_pnl = round((current_option_price - pos['entry_price']) * 100, 2)  # 1 contract = 100 shares
+        spy_game['position']['current_price'] = current_option_price
+        spy_game['position']['current_pnl'] = current_pnl
+        spy_game['position']['pnl_pct'] = round((current_option_price / pos['entry_price'] - 1) * 100, 1) if pos['entry_price'] > 0 else 0
     
     return jsonify({
         'success': True,
         'spy_price': spy_price,
+        'call_strike': call_strike,
+        'put_strike': put_strike,
+        'call_price': call_price,
+        'put_price': put_price,
         'position': spy_game['position'],
-        'current_pnl': round(current_pnl, 2),
+        'current_pnl': current_pnl,
         'session_pnl': round(spy_game['pnl'], 2),
         'trades': spy_game['trades'],
         'high_score': round(spy_game['high_score'], 2),
@@ -464,48 +482,37 @@ def get_spy_game():
 
 @app.route('/api/game/spy/buy', methods=['POST'])
 def spy_game_buy():
-    """Buy SPY in the game."""
+    """Buy a CALL or PUT in the game."""
+    data = request.json or {}
+    option_type = data.get('type', 'CALL').upper()
+    
     if spy_game['position']:
-        # If short, close position first
-        if spy_game['position']['side'] == 'short':
-            spy_price = market_data.get_spy_price()
-            if spy_price:
-                entry = spy_game['position']['entry']
-                qty = spy_game['position']['quantity']
-                pnl = (entry - spy_price) * qty
-                spy_game['pnl'] += pnl
-                spy_game['trades'] += 1
-                if spy_game['pnl'] > spy_game['high_score']:
-                    spy_game['high_score'] = spy_game['pnl']
-                spy_game['position'] = None
-                # Now open long
-                spy_game['position'] = {
-                    'side': 'long',
-                    'entry': spy_price,
-                    'quantity': 100
-                }
-                return jsonify({
-                    'success': True,
-                    'message': f'Closed short (P/L: ${pnl:.2f}), Bought 100 SPY @ ${spy_price:.2f}',
-                    'position': spy_game['position'],
-                    'pnl': round(pnl, 2),
-                    'session_pnl': round(spy_game['pnl'], 2)
-                })
-        return jsonify({'success': False, 'error': 'Already in long position'})
+        return jsonify({'success': False, 'error': 'Already in a position. Close it first.'})
     
     spy_price = market_data.get_spy_price()
     if not spy_price:
         return jsonify({'success': False, 'error': 'Could not get SPY price'})
     
+    if option_type == 'CALL':
+        strike = int(spy_price) + 1
+        entry_price = max(0.05, round(max(0, spy_price - strike) + 1.50, 2))
+    else:
+        strike = int(spy_price)
+        entry_price = max(0.05, round(max(0, strike - spy_price) + 1.50, 2))
+    
     spy_game['position'] = {
-        'side': 'long',
-        'entry': spy_price,
-        'quantity': 100
+        'type': option_type,
+        'strike': strike,
+        'entry_price': entry_price,
+        'entry_spy': spy_price,
+        'current_price': entry_price,
+        'current_pnl': 0,
+        'pnl_pct': 0,
     }
     
     return jsonify({
         'success': True,
-        'message': f'Bought 100 SPY @ ${spy_price:.2f}',
+        'message': f'Bought SPY ${strike} {option_type} @ ${entry_price:.2f}',
         'position': spy_game['position'],
         'session_pnl': round(spy_game['pnl'], 2)
     })
@@ -513,63 +520,36 @@ def spy_game_buy():
 
 @app.route('/api/game/spy/sell', methods=['POST'])
 def spy_game_sell():
-    """Sell SPY in the game (close long or open short)."""
+    """Close current option position."""
     spy_price = market_data.get_spy_price()
     if not spy_price:
         return jsonify({'success': False, 'error': 'Could not get SPY price'})
     
-    if spy_game['position']:
-        # Close position
-        entry = spy_game['position']['entry']
-        qty = spy_game['position']['quantity']
-        
-        if spy_game['position']['side'] == 'long':
-            pnl = (spy_price - entry) * qty
-            spy_game['pnl'] += pnl
-            spy_game['trades'] += 1
-            
-            if spy_game['pnl'] > spy_game['high_score']:
-                spy_game['high_score'] = spy_game['pnl']
-            
-            spy_game['position'] = None
-            
-            return jsonify({
-                'success': True,
-                'message': f'Sold 100 SPY @ ${spy_price:.2f} (P/L: ${pnl:.2f})',
-                'pnl': round(pnl, 2),
-                'session_pnl': round(spy_game['pnl'], 2)
-            })
-        else:
-            # Already short, close it
-            pnl = (entry - spy_price) * qty
-            spy_game['pnl'] += pnl
-            spy_game['trades'] += 1
-            
-            if spy_game['pnl'] > spy_game['high_score']:
-                spy_game['high_score'] = spy_game['pnl']
-            
-            spy_game['position'] = None
-            
-            return jsonify({
-                'success': True,
-                'message': f'Closed short @ ${spy_price:.2f} (P/L: ${pnl:.2f})',
-                'pnl': round(pnl, 2),
-                'session_pnl': round(spy_game['pnl'], 2)
-            })
+    if not spy_game['position']:
+        return jsonify({'success': False, 'error': 'No position to close'})
+    
+    pos = spy_game['position']
+    if pos['type'] == 'CALL':
+        exit_price = max(0.01, round(max(0, spy_price - pos['strike']) + 1.50, 2))
     else:
-        # Open short
-        spy_game['position'] = {
-            'side': 'short',
-            'entry': spy_price,
-            'quantity': 100
-        }
-        
-        return jsonify({
-            'success': True,
-            'message': f'Shorted 100 SPY @ ${spy_price:.2f}',
-            'position': spy_game['position'],
-            'session_pnl': round(spy_game['pnl'], 2)
-        })
+        exit_price = max(0.01, round(max(0, pos['strike'] - spy_price) + 1.50, 2))
+    
+    pnl = round((exit_price - pos['entry_price']) * 100, 2)
+    spy_game['pnl'] += pnl
+    spy_game['trades'] += 1
+    
+    if spy_game['pnl'] > spy_game['high_score']:
+        spy_game['high_score'] = spy_game['pnl']
+    
+    msg = f"Closed SPY ${pos['strike']} {pos['type']} @ ${exit_price:.2f} (Entry: ${pos['entry_price']:.2f}, P/L: ${pnl:.2f})"
+    spy_game['position'] = None
+    
+    return jsonify({
+        'success': True,
+        'message': msg,
+        'pnl': pnl,
+        'session_pnl': round(spy_game['pnl'], 2)
+    })
 
 
 @app.route('/api/game/spy/reset', methods=['POST'])
