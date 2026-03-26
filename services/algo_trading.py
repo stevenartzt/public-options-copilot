@@ -229,8 +229,8 @@ class AlgoTradingService:
             print(f"Error saving algo trading state: {e}")
     
     def _ensure_examples(self):
-        """Add example strategies if none exist."""
-        if len(self.strategies) > 0:
+        """Add example strategies if fewer than 4 exist."""
+        if len(self.strategies) >= 4:
             return
         
         examples = [

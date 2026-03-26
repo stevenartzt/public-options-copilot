@@ -1342,13 +1342,15 @@ async function updateSpyGame() {
         const times = game.price_history.map(p => new Date(p.time).toLocaleTimeString());
         const prices = game.price_history.map(p => p.price);
         
+        const minP = Math.min(...prices) * 0.999;
+        const maxP = Math.max(...prices) * 1.001;
         Plotly.react('spy-chart', [{
             x: times,
             y: prices,
             type: 'scatter',
             mode: 'lines',
             line: { color: '#6366f1', width: 2 },
-            fill: 'tozeroy',
+            fill: 'tonexty',
             fillcolor: 'rgba(99, 102, 241, 0.1)'
         }], {
             margin: { t: 10, r: 20, b: 40, l: 60 },
@@ -1356,7 +1358,7 @@ async function updateSpyGame() {
             plot_bgcolor: '#16161f',
             font: { color: '#a0a0b0' },
             xaxis: { showgrid: false },
-            yaxis: { showgrid: true, gridcolor: '#2a2a3a' }
+            yaxis: { showgrid: true, gridcolor: '#2a2a3a', range: [minP, maxP] }
         }, { responsive: true, displayModeBar: false });
     }
 }

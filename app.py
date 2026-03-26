@@ -160,6 +160,11 @@ def get_option_chain(symbol: str):
     # Fallback to yfinance
     chain = market_data.get_option_chain(symbol.upper(), expiration)
     if chain:
+        # Add current price for ATM detection
+        if not chain.get('underlying_price'):
+            quote = market_data.get_quote(symbol.upper())
+            if quote:
+                chain['underlying_price'] = quote.get('price')
         return jsonify({'success': True, **chain})
     
     return jsonify({'success': False, 'error': 'Could not get option chain'}), 404
