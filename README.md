@@ -5,6 +5,10 @@
 A comprehensive options trading assistant featuring real-time analysis, paper trading, and live trading integration with Public.com.
 
 
+## Demo
+
+📺 [Watch the demo walkthrough](https://x.com/StevenArtzt/status/2036979980329001114)
+
 
 ## Features
 

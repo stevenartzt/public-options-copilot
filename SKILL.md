@@ -16,6 +16,8 @@ metadata:
 
 A comprehensive options trading copilot that combines real-time portfolio management, edge-based options scanning, algorithmic strategy backtesting, paper trading, and market sentiment analysis — all powered by the Public.com API.
 
+📺 **Demo:** [Watch the walkthrough on X](https://x.com/StevenArtzt/status/2036979980329001114)
+
 ## Features
 
 - **📊 Dashboard** — Market overview with per-sector sentiment (11 sectors via ETF data), VIX monitoring, and SPY tracking
