@@ -320,6 +320,7 @@ async function loadPaperPortfolioTab() {
                         <th>Avg Price</th>
                         <th>Current</th>
                         <th>P/L</th>
+                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -337,8 +338,11 @@ async function loadPaperPortfolioTab() {
                             <td class="${pos.unrealized_pl >= 0 ? 'positive' : 'negative'}">
                                 $${pos.unrealized_pl.toFixed(2)}
                             </td>
+                            <td>
+                                <button class="btn btn-danger btn-small" onclick="event.stopPropagation(); paperSell('${pos.symbol}', ${pos.quantity})">Sell</button>
+                            </td>
                         </tr>
-                    `}).join('') || '<tr><td colspan="5" style="text-align:center;">No positions</td></tr>'}
+                    `}).join('') || '<tr><td colspan="6" style="text-align:center;">No positions</td></tr>'}
                 </tbody>
             </table>
         `;
