@@ -404,7 +404,14 @@ async function showAnalysisModal(symbol) {
         document.getElementById('modal-sma50').textContent = `$${analysis.sma_50.toFixed(2)}`;
         
         const reasonsList = document.getElementById('modal-reasons');
-        reasonsList.innerHTML = analysis.reasons.map(r => `<li>${r}</li>`).join('');
+        reasonsList.innerHTML = analysis.reasons.map(r => {
+            const color = r.includes('bullish') || r.includes('Golden') || r.includes('> SMA') || r.includes('strong') 
+                ? 'var(--success)' 
+                : r.includes('bearish') || r.includes('Death') || r.includes('< SMA') || r.includes('weak') || r.includes('overbought') || r.includes('CHOPPY')
+                ? 'var(--danger)' 
+                : 'var(--text-secondary)';
+            return `<li style="padding:3px 0;color:${color};">• ${r}</li>`;
+        }).join('');
         
         // Mini chart
         if (result.chart_data) {
