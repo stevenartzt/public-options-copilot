@@ -5,3 +5,8 @@ yfinance>=0.2.0
 pandas>=1.5.0
 publicdotcom-py==0.1.10
 requests>=2.28.0
+
+# Neural Network Training
+torch>=2.0.0
+scikit-learn>=1.0.0
+numpy>=1.21.0
